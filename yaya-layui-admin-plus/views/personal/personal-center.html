@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="../../favicon.ico" type="image/x-icon">
+    <title>个人中心</title>
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <link rel="stylesheet" href="../../font/bootstrap-icons.css">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--yaya-bg);
+            color: var(--yaya-text-1);
+        }
+
+        .personal-page {
+            min-height: 100vh;
+            padding: 20px;
+            background:
+                radial-gradient(900px 320px at 10% -80px, var(--yaya-primary-bg), transparent 70%),
+                var(--yaya-bg);
+        }
+
+        .personal-grid {
+            display: grid;
+            grid-template-columns: 330px minmax(0, 1fr);
+            gap: 18px;
+            width: 100%;
+            max-width: 1180px;
+            margin: 0 auto;
+            align-items: start;
+            transition: opacity .2s ease;
+        }
+
+        .personal-page.is-loading .personal-grid {
+            opacity: .45;
+            pointer-events: none;
+        }
+
+        .page-loading {
+            position: fixed;
+            inset: 0;
+            z-index: 30;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: var(--yaya-text-3);
+            font-size: 13px;
+            background: color-mix(in srgb, var(--yaya-bg) 72%, transparent);
+        }
+
+        .personal-page.is-loading .page-loading {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--yaya-primary-border-light);
+            border-top-color: var(--yaya-primary);
+            border-radius: 50%;
+            animation: personal-spin .8s linear infinite;
+        }
+
+        @keyframes personal-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .profile-card,
+        .setting-card,
+        .security-tip {
+            background: var(--yaya-card);
+            border: 1px solid var(--yaya-border);
+            border-radius: 16px;
+            box-shadow: var(--yaya-shadow);
+        }
+
+        .profile-card {
+            overflow: hidden;
+            min-height: 500px;
+        }
+
+        .profile-cover {
+            position: relative;
+            height: 96px;
+            background:
+                radial-gradient(180px 90px at 85% 10%, rgba(255,255,255,.32), transparent 70%),
+                linear-gradient(135deg, var(--yaya-primary), #7c6cff 70%, #9b8cff);
+        }
+
+        .profile-cover::after {
+            content: '';
+            position: absolute;
+            right: 26px;
+            bottom: -34px;
+            width: 110px;
+            height: 110px;
+            border: 18px solid rgba(255,255,255,.12);
+            border-radius: 50%;
+        }
+
+        .avatar-zone {
+            display: flex;
+            justify-content: center;
+            margin-top: -54px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .avatar-wrap {
+            position: relative;
+            width: 108px;
+            height: 108px;
+            border-radius: 50%;
+            padding: 4px;
+            background: var(--yaya-card);
+            box-shadow: 0 8px 22px rgba(31, 56, 88, .16);
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .avatar-wrap img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+            background: var(--yaya-gray-200);
+        }
+
+        .avatar-mask {
+            position: absolute;
+            inset: 4px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            color: #fff;
+            font-size: 11px;
+            background: rgba(15, 23, 42, .58);
+            opacity: 0;
+            transition: opacity .18s ease;
+        }
+
+        .avatar-mask i {
+            font-size: 20px;
+        }
+
+        .avatar-wrap:hover .avatar-mask,
+        .avatar-wrap.is-uploading .avatar-mask {
+            opacity: 1;
+        }
+
+        .avatar-wrap.is-uploading .avatar-mask i {
+            animation: personal-spin .8s linear infinite;
+        }
+
+        .profile-body {
+            padding: 14px 22px 24px;
+            text-align: center;
+        }
+
+        .profile-name {
+            margin: 6px 0 4px;
+            font-size: 21px;
+            font-weight: 650;
+            color: var(--yaya-text-1);
+            line-height: 1.35;
+            word-break: break-all;
+        }
+
+        .profile-account {
+            margin: 0;
+            font-size: 12px;
+            color: var(--yaya-text-4);
+            word-break: break-all;
+        }
+
+        .role-tags {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            min-height: 24px;
+            margin: 14px 0 18px;
+        }
+
+        .role-tag {
+            display: inline-flex;
+            align-items: center;
+            height: 23px;
+            padding: 0 10px;
+            border-radius: 999px;
+            color: var(--yaya-primary);
+            background: var(--yaya-primary-bg);
+            border: 1px solid var(--yaya-primary-border-light);
+            font-size: 11px;
+        }
+
+        .role-tag.is-empty {
+            color: var(--yaya-text-4);
+            background: var(--yaya-gray-100);
+            border-color: var(--yaya-border);
+        }
+
+        .meta-list {
+            border-top: 1px solid var(--yaya-border);
+            padding-top: 6px;
+            text-align: left;
+        }
+
+        .meta-row {
+            display: grid;
+            grid-template-columns: 82px minmax(0, 1fr);
+            align-items: center;
+            gap: 10px;
+            min-height: 42px;
+            border-bottom: 1px dashed var(--yaya-border);
+        }
+
+        .meta-row:last-child {
+            border-bottom: 0;
+        }
+
+        .meta-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            color: var(--yaya-text-3);
+        }
+
+        .meta-label i {
+            font-size: 14px;
+            color: var(--yaya-primary);
+        }
+
+        .meta-value {
+            min-width: 0;
+            font-size: 12px;
+            color: var(--yaya-text-2);
+            text-align: right;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .personal-main {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .page-heading {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 2px 2px 0;
+        }
+
+        .page-heading h1 {
+            margin: 0;
+            font-size: 22px;
+            line-height: 1.35;
+            color: var(--yaya-text-1);
+        }
+
+        .page-heading p {
+            margin: 5px 0 0;
+            font-size: 12px;
+            color: var(--yaya-text-3);
+        }
+
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 26px;
+            padding: 0 10px;
+            white-space: nowrap;
+            border-radius: 999px;
+            color: var(--yaya-success);
+            background: var(--yaya-success-bg);
+            border: 1px solid var(--yaya-success-border-light);
+            font-size: 11px;
+        }
+
+        .setting-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 20px;
+        }
+
+        .setting-icon {
+            flex: 0 0 46px;
+            width: 46px;
+            height: 46px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 13px;
+            font-size: 21px;
+        }
+
+        .setting-icon.is-profile {
+            color: var(--yaya-primary);
+            background: var(--yaya-primary-bg);
+        }
+
+        .setting-icon.is-password {
+            color: var(--yaya-warning);
+            background: var(--yaya-warning-bg);
+        }
+
+        .setting-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .setting-content h3 {
+            margin: 0;
+            font-size: 15px;
+            line-height: 1.5;
+            color: var(--yaya-text-1);
+        }
+
+        .setting-content p {
+            margin: 4px 0 0;
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--yaya-text-3);
+        }
+
+        .setting-card .yaya-btn {
+            flex: none;
+        }
+
+        .security-tip {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, var(--yaya-warning-bg), var(--yaya-card));
+            border-color: var(--yaya-warning-border-light);
+        }
+
+        .security-tip i {
+            margin-top: 1px;
+            color: var(--yaya-warning);
+            font-size: 16px;
+        }
+
+        .security-tip p {
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.7;
+            color: var(--yaya-text-3);
+        }
+
+        @media (max-width: 900px) {
+            .personal-page {
+                padding: 14px;
+            }
+
+            .personal-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .profile-card {
+                min-height: 0;
+            }
+
+            .meta-row {
+                grid-template-columns: 76px minmax(0, 1fr);
+            }
+        }
+
+        @media (max-width: 520px) {
+            .page-heading {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .setting-card {
+                align-items: flex-start;
+                flex-wrap: wrap;
+            }
+
+            .setting-card .yaya-btn {
+                margin-left: 60px;
+            }
+
+            .setting-content {
+                flex-basis: calc(100% - 60px);
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="personal-page is-loading" id="personalPage">
+    <div class="page-loading">
+        <span class="loading-spinner"></span>
+        <span>正在加载个人资料...</span>
+    </div>
+
+    <div class="personal-grid">
+        <aside class="profile-card">
+            <div class="profile-cover"></div>
+            <div class="avatar-zone">
+                <div class="avatar-wrap" id="avatarUpload" title="点击更换头像">
+                    <img id="profileAvatar" src="../../image/avatar.gif" alt="头像">
+                    <div class="avatar-mask">
+                        <i class="layui-icon layui-icon-camera-fill"></i>
+                        <span>更换头像</span>
+                    </div>
+                </div>
+            </div>
+            <div class="profile-body">
+                <h2 class="profile-name" id="profileNickname">--</h2>
+                <p class="profile-account" id="profileUsername">@--</p>
+                <div class="role-tags" id="profileRoles"></div>
+
+                <div class="meta-list">
+                    <div class="meta-row">
+                        <span class="meta-label"><i class="bi bi-envelope"></i>邮箱</span>
+                        <span class="meta-value" id="profileEmail">-</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label"><i class="bi bi-phone"></i>手机</span>
+                        <span class="meta-value" id="profilePhone">-</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label"><i class="bi bi-gender-ambiguous"></i>性别</span>
+                        <span class="meta-value" id="profileSex">-</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label"><i class="bi bi-diagram-3"></i>部门</span>
+                        <span class="meta-value" id="profileDept">-</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="personal-main">
+            <div class="page-heading">
+                <div>
+                    <h1>个人中心</h1>
+                    <p>管理你的个人资料与账号安全</p>
+                </div>
+                <span class="security-badge"><i class="bi bi-shield-check"></i>账号安全建议定期修改密码</span>
+            </div>
+
+            <section class="setting-card">
+                <div class="setting-icon is-profile"><i class="bi bi-person-vcard"></i></div>
+                <div class="setting-content">
+                    <h3>个人资料</h3>
+                    <p>修改昵称、手机号、邮箱和性别；所属部门由管理员维护</p>
+                </div>
+                <button type="button" class="yaya-btn is-link-primary" id="userEditBtn">编辑资料</button>
+            </section>
+
+            <section class="setting-card">
+                <div class="setting-icon is-password"><i class="bi bi-shield-lock"></i></div>
+                <div class="setting-content">
+                    <h3>账号密码</h3>
+                    <p>修改成功后当前登录状态将失效，需要使用新密码重新登录</p>
+                </div>
+                <button type="button" class="yaya-btn is-link-primary" id="passwordEditBtn">修改密码</button>
+            </section>
+
+            <section class="security-tip">
+                <i class="bi bi-info-circle"></i>
+                <p>点击左侧头像可上传新头像。头像支持 jpg、jpeg、png、gif、webp、bmp 格式，文件大小不超过 5MB。</p>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const layer = layui.layer;
+        const upload = layui.upload;
+        let profile = null;
+
+        function avatarUrl(value) {
+            return window.yaya_resolve_file_url(value) || '../../image/avatar.gif';
+        }
+
+        function sexText(sex) {
+            const map = {1: '男', 0: '女', 2: '保密'};
+            return map[Number(sex)] || '-';
+        }
+
+        function setText(id, value, fallback) {
+            $(id).text(value == null || value === '' ? (fallback || '-') : value);
+        }
+
+        function renderRoles(roles) {
+            const $roles = $('#profileRoles').empty();
+            const list = Array.isArray(roles) ? roles.filter(Boolean) : [];
+            if (!list.length) {
+                $('<span class="role-tag is-empty"></span>').text('未分配角色').appendTo($roles);
+                return;
+            }
+            list.forEach(function (name) {
+                $('<span class="role-tag"></span>').text(name).appendTo($roles);
+            });
+        }
+
+        function persistUser(nextProfile) {
+            try {
+                const data = layui.data('yaya') || {};
+                const nextUser = Object.assign({}, data.user || {}, {
+                    nickname: nextProfile.nickname,
+                    phone: nextProfile.phone,
+                    email: nextProfile.email,
+                    sex: nextProfile.sex,
+                    avatar: nextProfile.avatar,
+                    deptId: nextProfile.deptId
+                });
+                layui.data('yaya', {key: 'user', value: nextUser});
+                if (window.parent && window.parent !== window && window.parent.document) {
+                    const parentDoc = window.parent.document;
+                    const nicknameEl = parentDoc.querySelector('#nickname');
+                    const avatarEl = parentDoc.querySelector('#avatar');
+                    if (nicknameEl) {
+                        nicknameEl.textContent = nextProfile.nickname || nextProfile.username || '';
+                    }
+                    if (avatarEl) {
+                        avatarEl.src = avatarUrl(nextProfile.avatar);
+                    }
+                }
+            } catch (e) {
+                // 顶层窗口不可访问时忽略, 不影响当前页面
+            }
+        }
+
+        function renderProfile() {
+            if (!profile) {
+                return;
+            }
+            const nickname = profile.nickname || profile.username || '未命名用户';
+            setText('#profileNickname', nickname);
+            setText('#profileUsername', profile.username ? '@' + profile.username : '@-');
+            setText('#profileEmail', profile.email);
+            setText('#profilePhone', profile.phone);
+            setText('#profileSex', sexText(profile.sex));
+            setText('#profileDept', profile.deptName);
+            $('#profileEmail').attr('title', profile.email || '');
+            $('#profilePhone').attr('title', profile.phone || '');
+            $('#profileDept').attr('title', profile.deptName || '');
+            renderRoles(profile.roleNames);
+            const avatar = $('#profileAvatar');
+            avatar.off('error.personal').on('error.personal', function () {
+                this.src = '../../image/avatar.gif';
+            });
+            avatar.attr('src', avatarUrl(profile.avatar));
+            document.title = nickname + ' - 个人中心';
+            persistUser(profile);
+        }
+
+        function loadProfile() {
+            $('#personalPage').addClass('is-loading');
+            $.ajax({
+                type: 'POST',
+                url: server_url + '/system/personal/getProfile',
+                headers: {Authorization: token},
+                contentType: 'application/json',
+                data: '{}',
+                dataType: 'json',
+                success: function (response) {
+                    if (response.code === 0) {
+                        profile = response.data || {};
+                        renderProfile();
+                    } else {
+                        layer.msg(response.msg || '个人资料加载失败');
+                    }
+                },
+                error: function () {
+                    layer.msg('个人资料加载失败，请刷新页面重试');
+                },
+                complete: function () {
+                    $('#personalPage').removeClass('is-loading');
+                }
+            });
+        }
+
+        upload.render({
+            elem: '#avatarUpload',
+            url: server_url + '/system/personal/uploadAvatar',
+            headers: {Authorization: token},
+            field: 'file',
+            accept: 'images',
+            size: 5120,
+            before: function () {
+                $('#avatarUpload').addClass('is-uploading');
+            },
+            done: function (response) {
+                $('#avatarUpload').removeClass('is-uploading');
+                if (response.code === 0) {
+                    if (!profile) {
+                        profile = {};
+                    }
+                    profile.avatar = response.data;
+                    $('#profileAvatar').attr('src', avatarUrl(profile.avatar));
+                    persistUser(profile);
+                    layer.msg('头像更新成功', {icon: 1});
+                } else {
+                    layer.msg(response.msg || '头像上传失败');
+                }
+            },
+            error: function () {
+                $('#avatarUpload').removeClass('is-uploading');
+                layer.msg('头像上传失败，请稍后重试');
+            }
+        });
+
+        $('#userEditBtn').on('click', function () {
+            layer.open({
+                type: 2,
+                title: false,
+                closeBtn: false,
+                area: ['640px', '460px'],
+                shade: 0.35,
+                shadeClose: false,
+                content: 'personal-center-user-edit.html',
+                end: loadProfile
+            });
+        });
+
+        $('#passwordEditBtn').on('click', function () {
+            layer.open({
+                type: 2,
+                title: false,
+                closeBtn: false,
+                area: ['520px', '460px'],
+                shade: 0.35,
+                shadeClose: false,
+                content: 'personal-center-password-edit.html'
+            });
+        });
+
+        loadProfile();
+    });
+</script>
+</body>
+</html>

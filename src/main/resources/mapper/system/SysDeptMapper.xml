@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yaya.system.mapper.SysDeptMapper">
+
+    <!--
+        自定义 SQL 统一写在本文件(接口中不允许写注解 SQL)
+        继承 BaseMapper 提供的通用方法无需在此声明
+    -->
+
+    <update id="logicDeleteById">
+        UPDATE sys_dept
+        SET is_deleted = 1,
+            update_by = #{updateBy},
+            update_time = #{updateTime}
+        WHERE dept_id = #{deptId}
+          AND is_deleted = 0
+    </update>
+
+    <select id="selectByIdIncludeDeleted" resultType="com.yaya.system.domain.entity.SysDept">
+        SELECT *
+        FROM sys_dept
+        WHERE dept_id = #{deptId}
+    </select>
+
+</mapper>

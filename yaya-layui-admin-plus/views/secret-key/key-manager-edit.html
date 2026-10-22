@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <link rel="stylesheet" href="../../font/bootstrap-icons.css">
+    <title>密钥编辑</title>
+    <style>
+        html, body {
+            height: 100%;
+        }
+        body {
+            overflow-y: auto;
+        }
+        .yaya-box-fluid {
+            padding-bottom: 24px;
+        }
+        .layui-form-label {
+            width: 100px;
+        }
+        .layui-input-block {
+            margin-left: 130px;
+        }
+        .key-generate-hint {
+            margin-left: 130px;
+            margin-top: 4px;
+            font-size: 12px;
+            color: #909399;
+            line-height: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="layui-fluid">
+        <form class="layui-form" lay-filter="secretKeyForm" style="margin-top: 10px;">
+            <div class="layui-form-item">
+                <label class="layui-form-label">密钥类别</label>
+                <div class="layui-input-block">
+                    <input type="radio" name="keyCategory" value="1" title="对称密钥" disabled>
+                    <input type="radio" name="keyCategory" value="2" title="非对称密钥" disabled>
+                </div>
+                <div class="key-generate-hint">密钥类别和密钥内容创建后不允许修改</div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">加密算法</label>
+                <div class="layui-input-block">
+                    <input type="text" name="algorithm" disabled autocomplete="off" class="layui-input layui-disabled">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">应用ID</label>
+                <div class="layui-input-block">
+                    <input type="text" name="appId" maxlength="64" placeholder="密钥分配给的第三方应用标识,留空表示平台内部使用"
+                           autocomplete="off" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">状态</label>
+                <div class="layui-input-block">
+                    <input type="radio" name="status" value="1" title="正常" checked>
+                    <input type="radio" name="status" value="0" title="停用">
+                </div>
+            </div>
+            <div class="layui-form-item layui-form-text">
+                <label class="layui-form-label">备注</label>
+                <div class="layui-input-block">
+                    <textarea name="remark" maxlength="500" placeholder="请输入备注" class="layui-textarea"></textarea>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button type="button" id="btnSave" data-perm="secretKey:update" class="yaya-btn yaya-primary" lay-submit lay-filter="save">保存</button>
+                    <button type="button" class="yaya-btn" id="btnCancel" style="margin-left: 10px;">取消</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const layer = layui.layer;
+        const form = layui.form;
+
+        const keyId = new URLSearchParams(location.search).get('keyId');
+        let keyCategory = null;
+
+        function disableSave() {
+            $('#btnSave').prop('disabled', true).css('opacity', .5);
+        }
+
+        if (!keyId) {
+            disableSave();
+            layer.msg('缺少密钥ID');
+        }
+
+        if (keyId) {
+            $.ajax({
+                url: server_url + '/system/secretKey/getSecretKeyDetail',
+                method: 'POST',
+                headers: {
+                    Authorization: token
+                },
+                data: {
+                    keyId: keyId
+                },
+                dataType: 'json',
+                success: function (resp) {
+                    if (resp.code !== 0) {
+                        disableSave();
+                        layer.msg(resp.msg);
+                        return;
+                    }
+                    const data = resp.data;
+                    keyCategory = data.keyCategory;
+                    form.val('secretKeyForm', {
+                        keyCategory: String(data.keyCategory),
+                        algorithm: data.algorithm || '',
+                        appId: data.appId || '',
+                        status: String(data.status == null ? 1 : data.status),
+                        remark: data.remark || ''
+                    });
+                    form.render('radio');
+                },
+                error: function () {
+                    disableSave();
+                    layer.msg('密钥详情加载失败，请稍后重试');
+                }
+            });
+        }
+
+        function closeSelf() {
+            if (parent && parent.layer && parent.layer.getFrameIndex) {
+                const index = parent.layer.getFrameIndex(window.name);
+                parent.layer.close(index);
+                return;
+            }
+            layer.closeAll();
+        }
+
+        $('#btnCancel').on('click', function () {
+            closeSelf();
+        });
+
+        form.on('submit(save)', function (data) {
+            if (!keyId) {
+                layer.msg('缺少密钥ID');
+                return false;
+            }
+            const field = data.field;
+            const appId = $.trim(field.appId || '');
+            const index = layer.load(0);
+            $.ajax({
+                url: server_url + '/system/secretKey/updateSecretKey',
+                method: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    Authorization: token
+                },
+                data: JSON.stringify({
+                    keyId: keyId,
+                    keyCategory: Number(field.keyCategory),
+                    appId: appId || null,
+                    status: Number(field.status),
+                    remark: $.trim(field.remark || '') || null
+                }),
+                dataType: 'json',
+                success: function (resp) {
+                    layer.close(index);
+                    if (resp.code === 0) {
+                        if (parent && parent.layer && parent.layer.msg) {
+                            parent.layer.msg('更新成功');
+                        } else {
+                            layer.msg('更新成功');
+                        }
+                        closeSelf();
+                    } else {
+                        layer.msg(resp.msg);
+                    }
+                },
+                error: function () {
+                    layer.close(index);
+                    layer.msg('请求失败，请稍后重试');
+                }
+            });
+            return false;
+        });
+    });
+</script>
+</body>
+</html>

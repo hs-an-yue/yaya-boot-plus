@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <link rel="stylesheet" href="../../font/bootstrap-icons.css">
+    <title>部门管理</title>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="yaya-panel">
+        <form class="layui-form" style="padding: 10px 0" onsubmit="return false;">
+            <div class="layui-row">
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">部门名称</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="deptName" placeholder="请输入部门名称" autocomplete="off" class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">状态</label>
+                    <div class="yaya-input-block">
+                        <select id="status">
+                            <option value="">全部</option>
+                            <option value="1">正常</option>
+                            <option value="0">停用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <button type="button" id="btnSearch" data-perm="dept:search" class="yaya-btn yaya-primary">搜索</button>
+                    <button type="button" id="btnReset" class="yaya-btn" style="margin-left: 10px;">重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="yaya-panel" style="margin-top: 10px;">
+        <div style="display: flex;flex-direction: row;justify-content: flex-end;padding: 10px;">
+            <button id="btnExpandAll" type="button" class="yaya-btn yaya-default" style="margin-right: 10px;">展开</button>
+            <button id="btnCollapseAll" type="button" class="yaya-btn yaya-default" style="margin-right: 10px;">收起</button>
+            <button id="btnAdd" data-perm="dept:add" type="button" class="yaya-btn yaya-primary">新增部门</button>
+        </div>
+        <table class="layui-hide" id="treeTable" lay-filter="deptTable"></table>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const table = layui.treeTable;
+        const layer = layui.layer;
+        const form = layui.form;
+
+        const TABLE_ID = 'deptTable';
+
+        function escapeHtml(text) {
+            return String(text == null ? '' : text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function buildWhere() {
+            const where = {};
+            const deptName = $.trim($('#deptName').val());
+            if (deptName) {
+                where.deptName = deptName;
+            }
+            const status = $('#status').val();
+            if (status !== '') {
+                where.status = Number(status);
+            }
+            return where;
+        }
+
+        function reloadTable() {
+            table.reload(TABLE_ID, {
+                where: buildWhere()
+            });
+        }
+
+        table.render({
+            elem: '#treeTable',
+            id: TABLE_ID,
+            url: server_url + '/system/dept/getDeptTree',
+            method: 'post',
+            headers: {
+                Authorization: token
+            },
+            contentType: 'application/json',
+            where: buildWhere(),
+            skin: 'line',
+            page: false,
+            cols: [[
+                {field: 'deptName', title: '部门名称', width: 260},
+                {field: 'deptCode', title: '部门编码', width: 150},
+                {field: 'sort', title: '排序', width: 70, align: 'center'},
+                {
+                    title: '状态',
+                    width: 80,
+                    align: 'center',
+                    templet: function (row) {
+                        if (Number(row.status) === 1) {
+                            return '<span class="yaya-tag yaya-tag-plain-success is-round tag-small">正常</span>';
+                        }
+                        return '<span class="yaya-tag yaya-tag-plain-danger is-round tag-small">停用</span>';
+                    }
+                },
+                {
+                    field: 'createByName',
+                    title: '创建人',
+                    width: 120,
+                    templet: function (row) {
+                        return escapeHtml(row.createByName) || '-';
+                    }
+                },
+                {field: 'createTime', title: '创建时间', width: 180},
+                {field: 'updateTime', title: '更新时间', width: 180},
+                {
+                    field: 'remark',
+                    title: '备注',
+                    minWidth: 180,
+                    templet: function (row) {
+                        return row.remark ? $('<div>').text(row.remark).html() : '-';
+                    }
+                },
+                {
+                    title: '操作',
+                    fixed: 'right',
+                    width: 280,
+                    templet: function (row) {
+                        const enabled = Number(row.status) === 1;
+                        return window.yaya_permission_actions([
+                            {text: '编辑', event: 'edit', perm: 'dept:update'},
+                            {text: '新增下级', event: 'addChild', perm: 'dept:add'},
+                            {
+                                text: enabled ? '停用' : '启用',
+                                event: 'status',
+                                perm: enabled ? 'dept:disable' : 'dept:enable',
+                                className: 'yaya-btn is-link-success yaya-btn-small'
+                            },
+                            {
+                                text: '删除', event: 'delete', perm: 'dept:del',
+                                className: 'yaya-btn is-link-danger yaya-btn-small'
+                            }
+                        ]);
+                    }
+                }
+            ]],
+            tree: {
+                customName: {
+                    id: 'deptId',
+                    name: 'deptName'
+                },
+                view: {
+                    expandAllDefault: false
+                }
+            }
+        });
+
+        function openDeptForm(deptId, parentId) {
+            let content;
+            if (deptId) {
+                content = 'dept-edit.html?deptId=' + encodeURIComponent(deptId);
+            } else {
+                content = 'dept-add.html';
+                if (parentId) {
+                    content += '?parentId=' + encodeURIComponent(parentId);
+                }
+            }
+            layer.open({
+                type: 2,
+                title: deptId ? '编辑部门' : '新增部门',
+                area: ['640px', '80%'],
+                shadeClose: true,
+                content: content,
+                end: function () {
+                    reloadTable();
+                }
+            });
+        }
+
+        $('#btnSearch').on('click', reloadTable);
+        $('#btnReset').on('click', function () {
+            $('#deptName').val('');
+            $('#status').val('');
+            form.render('select');
+            reloadTable();
+        });
+        $('#btnAdd').on('click', function () {
+            openDeptForm();
+        });
+        $('#btnExpandAll').on('click', function () {
+            table.expandAll(TABLE_ID, true);
+        });
+        $('#btnCollapseAll').on('click', function () {
+            table.expandAll(TABLE_ID, false);
+        });
+
+        table.on('tool(' + TABLE_ID + ')', function (obj) {
+            const data = obj.data;
+            if (obj.event === 'edit') {
+                openDeptForm(data.deptId);
+                return;
+            }
+            if (obj.event === 'addChild') {
+                openDeptForm(null, data.deptId);
+                return;
+            }
+            if (obj.event === 'status') {
+                const targetStatus = Number(data.status) === 1 ? 0 : 1;
+                const actionText = targetStatus === 1 ? '启用' : '停用';
+                layer.confirm('确定' + actionText + '部门「' + escapeHtml(data.deptName) + '」吗？', {
+                    title: '提示'
+                }, function (index) {
+                    layer.close(index);
+                    $.ajax({
+                        url: server_url + '/system/dept/updateDeptStatus',
+                        method: 'POST',
+                        headers: {
+                            Authorization: token
+                        },
+                        data: {
+                            deptId: data.deptId,
+                            status: targetStatus
+                        },
+                        dataType: 'json',
+                        success: function (resp) {
+                            layer.msg(resp.msg);
+                            if (resp.code === 0) {
+                                reloadTable();
+                            }
+                        },
+                        error: function () {
+                            layer.msg('请求失败，请稍后重试');
+                        }
+                    });
+                });
+                return;
+            }
+            if (obj.event === 'delete') {
+                layer.confirm('确定删除部门「' + escapeHtml(data.deptName) + '」吗？', {
+                    title: '提示'
+                }, function (index) {
+                    layer.close(index);
+                    $.ajax({
+                        url: server_url + '/system/dept/deleteDept',
+                        method: 'POST',
+                        headers: {
+                            Authorization: token
+                        },
+                        data: {
+                            deptId: data.deptId
+                        },
+                        dataType: 'json',
+                        success: function (resp) {
+                            layer.msg(resp.msg);
+                            if (resp.code === 0) {
+                                reloadTable();
+                            }
+                        },
+                        error: function () {
+                            layer.msg('请求失败，请稍后重试');
+                        }
+                    });
+                });
+            }
+        });
+    });
+</script>
+</body>
+</html>

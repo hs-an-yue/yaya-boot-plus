@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <title>消息详情</title>
+    <style>
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            overflow-y: auto;
+            background: #fafbfc;
+        }
+
+        .message-detail-shell {
+            max-width: 920px;
+            min-height: calc(100vh - 24px);
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message-detail-card {
+            flex: 1;
+            margin-top: 12px;
+            background: var(--yaya-card);
+            border: 1px solid var(--yaya-card-border);
+            border-radius: var(--yaya-radius-lg);
+            box-shadow: var(--yaya-shadow);
+            overflow: hidden;
+        }
+
+        .message-detail-head {
+            padding: 26px 30px 0;
+        }
+
+        .message-badges {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+
+        .message-type-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 12px;
+            border-radius: 2px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .5px;
+        }
+
+        .message-type-tag.level-0 {
+            color: #276749;
+            background: #e8f5e9;
+            border-left: 3px solid #38a169;
+        }
+
+        .message-type-tag.level-1 {
+            color: #b7791f;
+            background: #fff8e6;
+            border-left: 3px solid #d97706;
+        }
+
+        .message-type-tag.level-2 {
+            color: #c53030;
+            background: #fff5f5;
+            border-left: 3px solid #e53e3e;
+        }
+
+        .message-detail-title {
+            margin: 0;
+            font-size: 23px;
+            font-weight: 700;
+            line-height: 33px;
+            color: var(--yaya-text-1);
+            word-break: break-word;
+        }
+
+        .message-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 12px 0;
+            margin-top: 16px;
+            border-top: 1px solid var(--yaya-border);
+            border-bottom: 1px solid var(--yaya-border);
+            font-size: 12px;
+            color: var(--yaya-text-4);
+        }
+
+        .message-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .message-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 22px 30px 0;
+        }
+
+        .message-divider::before,
+        .message-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--yaya-border), transparent);
+        }
+
+        .message-divider-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--yaya-gray-400);
+        }
+
+        .message-detail-body {
+            padding: 20px 30px 30px;
+        }
+
+        .message-content {
+            font-size: 15px;
+            line-height: 1.85;
+            color: var(--yaya-text-2);
+            word-break: break-word;
+        }
+
+        .message-content p {
+            margin: 12px 0;
+        }
+
+        .message-content h1,
+        .message-content h2,
+        .message-content h3,
+        .message-content h4,
+        .message-content h5 {
+            margin: 20px 0 10px;
+            color: var(--yaya-text-1);
+            line-height: 1.4;
+        }
+
+        .message-content strong,
+        .message-content b {
+            font-weight: 600;
+            color: var(--yaya-text-1);
+        }
+
+        .message-content img,
+        .message-content video {
+            max-width: 100%;
+            height: auto;
+            margin: 12px 0;
+            border-radius: var(--yaya-radius-md);
+        }
+
+        .message-content table {
+            width: 100%;
+            margin: 14px 0;
+            border-collapse: collapse;
+        }
+
+        .message-content th,
+        .message-content td {
+            padding: 8px 10px;
+            border: 1px solid var(--yaya-border);
+            text-align: left;
+        }
+
+        .message-content th {
+            font-weight: 600;
+            background: var(--yaya-gray-100);
+        }
+
+        .message-content blockquote {
+            margin: 14px 0;
+            padding: 10px 14px;
+            color: var(--yaya-text-3);
+            background: var(--yaya-primary-bg);
+            border-left: 3px solid var(--yaya-primary-border);
+            border-radius: 0 var(--yaya-radius-sm) var(--yaya-radius-sm) 0;
+        }
+
+        .message-content a {
+            color: var(--yaya-primary);
+            text-decoration: none;
+        }
+
+        .message-attachments {
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 1px dashed var(--yaya-border);
+        }
+
+        .message-attachments-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--yaya-text-1);
+        }
+
+        .message-attachment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .message-attachment-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            color: var(--yaya-text-2);
+            background: var(--yaya-gray-100);
+            border: 1px solid var(--yaya-border);
+            border-radius: var(--yaya-radius-md);
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        .message-attachment-item:hover {
+            color: var(--yaya-primary);
+            border-color: var(--yaya-primary-border);
+        }
+
+        .message-attachment-item .attachment-name {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .message-state {
+            padding: 64px 24px;
+            text-align: center;
+            color: var(--yaya-text-4);
+        }
+
+        .message-state .layui-icon {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 42px;
+            color: var(--yaya-gray-400);
+        }
+
+        .message-state.is-error {
+            color: var(--yaya-danger);
+        }
+
+        .message-state.is-error .layui-icon {
+            color: var(--yaya-danger);
+        }
+
+        @media (max-width: 680px) {
+            .message-detail-head,
+            .message-detail-body,
+            .message-divider {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            .message-detail-title {
+                font-size: 19px;
+                line-height: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="message-detail-shell">
+        <div class="message-detail-card">
+            <div id="messageDetail">
+                <div class="message-state">
+                    <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i>
+                    消息加载中...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const layer = layui.layer;
+
+        const noticeId = new URLSearchParams(location.search).get('noticeId');
+
+        function escapeHtml(text) {
+            return String(text == null ? '' : text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function sanitizeHtml(html) {
+            return window.yaya_sanitize_html(html);
+        }
+
+        function levelText(level) {
+            const map = {0: '普通', 1: '重要', 2: '紧急'};
+            return map[Number(level)] || '普通';
+        }
+
+        function levelClass(level) {
+            const value = Number(level);
+            if (value === 2) return 'level-2';
+            if (value === 1) return 'level-1';
+            return 'level-0';
+        }
+
+        function renderError(message) {
+            $('#messageDetail').html('<div class="message-state is-error">'
+                + '<i class="layui-icon layui-icon-close-fill"></i>'
+                + escapeHtml(message) + '</div>');
+        }
+
+        function renderAttachments(attachments) {
+            if (!attachments || attachments.length === 0) {
+                return '';
+            }
+            let html = '<div class="message-attachments">'
+                + '<div class="message-attachments-title"><i class="layui-icon layui-icon-paperclip"></i>附件</div>'
+                + '<div class="message-attachment-list">';
+            attachments.forEach(function (file) {
+                const content = '<i class="layui-icon layui-icon-file" style="color:var(--yaya-primary);"></i>'
+                    + '<span class="attachment-name" title="' + escapeHtml(file.fileName) + '">'
+                    + escapeHtml(file.fileName) + '</span>'
+                    + '<i class="layui-icon layui-icon-download-circle" style="color:var(--yaya-text-4);"></i>';
+                const fileUrl = window.yaya_resolve_file_url(file.fileServerUrl);
+                if (fileUrl) {
+                    html += '<a class="message-attachment-item" href="' + escapeHtml(fileUrl)
+                        + '" target="_blank" rel="noopener">' + content + '</a>';
+                } else {
+                    html += '<span class="message-attachment-item">' + content + '</span>';
+                }
+            });
+            return html + '</div></div>';
+        }
+
+        function renderDetail(data) {
+            const levelValue = Number(data.noticeLevel);
+            const html = '<div class="message-detail-head">'
+                + '<div class="message-badges">'
+                + '<span class="message-type-tag ' + levelClass(data.noticeLevel) + '">'
+                + escapeHtml(data.noticeTypeName || '公告') + '</span>'
+                + (Number(data.isTop) === 1
+                    ? '<span class="yaya-tag yaya-tag-plain-primary is-round tag-small">置顶</span>' : '')
+                + '<span class="yaya-tag ' + (levelValue === 2
+                    ? 'yaya-tag-plain-danger' : (levelValue === 1
+                        ? 'yaya-tag-plain-warning' : 'yaya-tag-plain-info'))
+                + ' is-round tag-small">' + levelText(data.noticeLevel) + '</span>'
+                + '</div>'
+                + '<h1 class="message-detail-title">' + escapeHtml(data.noticeTitle) + '</h1>'
+                + '<div class="message-meta">'
+                + '<span><i class="layui-icon layui-icon-username"></i>发布人：'
+                + (escapeHtml(data.createByName) || '-') + '</span>'
+                + '<span><i class="layui-icon layui-icon-date"></i>发布时间：'
+                + (escapeHtml(data.publishTime) || '-') + '</span>'
+                + '<span class="' + (Number(data.isRead) === 1 ? 'is-read' : 'is-unread') + '">'
+                + '<i class="layui-icon ' + (Number(data.isRead) === 1
+                    ? 'layui-icon-ok-circle' : 'layui-icon-notice') + '"></i>'
+                + (Number(data.isRead) === 1 ? '已读' : '未读') + '</span>'
+                + '</div></div>'
+                + '<div class="message-divider"><span class="message-divider-dot"></span>'
+                + '<span class="message-divider-dot"></span>'
+                + '<span class="message-divider-dot"></span></div>'
+                + '<div class="message-detail-body">'
+                + '<div class="message-content">' + sanitizeHtml(data.noticeContent) + '</div>'
+                + renderAttachments(data.attachments)
+                + '</div>';
+            $('#messageDetail').html(html);
+        }
+
+        function loadDetail() {
+            if (!noticeId) {
+                renderError('缺少消息ID');
+                return;
+            }
+            $.ajax({
+                url: server_url + '/system/notice/getMyNoticeDetail',
+                method: 'POST',
+                headers: {Authorization: token},
+                data: {noticeId: noticeId},
+                dataType: 'json',
+                success: function (resp) {
+                    if (resp.code !== 0) {
+                        renderError(resp.msg || '消息不存在或无权查看');
+                        return;
+                    }
+                    renderDetail(resp.data || {});
+                },
+                error: function () {
+                    renderError('消息加载失败，请稍后重试');
+                }
+            });
+        }
+
+
+        loadDetail();
+    });
+</script>
+</body>
+</html>

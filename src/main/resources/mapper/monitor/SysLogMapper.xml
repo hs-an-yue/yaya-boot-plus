@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yaya.monitor.mapper.SysLogMapper">
+
+    <select id="getSysLogPage" resultType="com.yaya.monitor.domain.vo.SysLogVo">
+        SELECT
+            l.log_id,
+            l.business_name,
+            l.log_type,
+            l.dept_id,
+            d.dept_name AS dept_name,
+            l.oper_id,
+            u.nickname AS oper_name,
+            u.username AS username,
+            l.request_url,
+            l.request_params,
+            l.execution_time,
+            l.status,
+            l.error_msg,
+            l.ip,
+            l.address,
+            l.browser,
+            l.track_id,
+            l.oper_time
+        FROM sys_log l
+        LEFT JOIN sys_user u ON u.user_id = l.oper_id
+        LEFT JOIN sys_dept d ON d.dept_id = l.dept_id
+        <where>
+            <if test="logType != null">
+                AND l.log_type = #{logType}
+            </if>
+            <if test="operName != null and operName != ''">
+                AND u.nickname LIKE CONCAT('%', #{operName}, '%')
+            </if>
+            <if test="username != null and username != ''">
+                AND u.username LIKE CONCAT('%', #{username}, '%')
+            </if>
+            <if test="requestUrl != null and requestUrl != ''">
+                AND l.request_url LIKE CONCAT('%', #{requestUrl}, '%')
+            </if>
+            <if test="status != null">
+                AND l.status = #{status}
+            </if>
+            <if test="ip != null and ip != ''">
+                AND l.ip = #{ip}
+            </if>
+            <if test="trackId != null and trackId != ''">
+                AND l.track_id = #{trackId}
+            </if>
+            <if test="startTime != null">
+                AND l.oper_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND l.oper_time &lt;= #{endTime}
+            </if>
+        </where>
+        ORDER BY l.oper_time DESC, l.log_id DESC
+    </select>
+
+    <select id="getSysLogDetail" resultType="com.yaya.monitor.domain.vo.SysLogVo">
+        SELECT
+            l.log_id,
+            l.business_name,
+            l.log_type,
+            l.dept_id,
+            d.dept_name AS dept_name,
+            l.oper_id,
+            u.nickname AS oper_name,
+            u.username AS username,
+            l.request_url,
+            l.request_params,
+            l.execution_time,
+            l.status,
+            l.error_msg,
+            l.ip,
+            l.address,
+            l.browser,
+            l.track_id,
+            l.oper_time
+        FROM sys_log l
+        LEFT JOIN sys_user u ON u.user_id = l.oper_id
+        LEFT JOIN sys_dept d ON d.dept_id = l.dept_id
+        WHERE l.log_id = #{logId}
+    </select>
+
+    <!--
+        清空日志表
+        使用 TRUNCATE 而不是无 where 的 DELETE: 前者是显式的清空语义(DDL),
+        后者会被防全表更新删除插件(BlockAttackInnerInterceptor)拦截
+    -->
+    <update id="clearSysLog">
+        TRUNCATE TABLE sys_log
+    </update>
+
+    <!-- 删除超过保留天数的日志 -->
+    <delete id="deleteBefore">
+        DELETE FROM sys_log
+        WHERE oper_time &lt; #{cutoff}
+    </delete>
+
+</mapper>

@@ -1,0 +1,47 @@
+yaya:
+  file-path: d:/yaya/upload                 # 文件上传的保存目录.  注意: 结尾不要加斜线
+  log-path: d:/yaya/log                     # 日志的保存目录.  注意: 结尾不要加斜线
+  captcha-timeout: 100        # 验证码过期时间(单位秒)
+  captcha-length: 4           # 验证码生成数量
+  captcha-width: 120          # 验证码宽度
+  captcha-height: 40          # 验证码高度
+  captcha-circle-count: 2     # 验证码干扰线数量
+  token-timeout: 30           # 访问令牌过期时间(单位分钟)
+  token-renew-threshold: 20   # 访问令牌剩余有效期小于该值时自动续签(单位分钟)
+  password-max-retry: 3       # 单个账号最大密码错误次数,默认3次
+  password-lock-minutes: 15   # 密码连续错误后的临时锁定时长(分钟)
+  login-ip-max-retry: 20      # 同一IP在窗口期内的最大登录失败次数,默认20次
+  login-ip-window-minutes: 5  # IP登录失败次数统计窗口(分钟),默认5分钟
+  login-ip-block-minutes: 10  # IP达到失败阈值后的封禁时长(分钟),默认10分钟
+  log-retention-days: 30      # 日志文件保留天数,默认30天
+  log-total-size-cap: 2GB     # 归档日志总大小上限(超过后删除最旧归档),默认2GB
+server:
+  port: 8081
+  forward-headers-strategy: native # 开启后，Spring 会自动解析 X-Forwarded-For 头，并重写 request.getRemoteAddr()
+  servlet:
+    session:
+      cookie:
+        http-only: true # http cookie只读
+        secure: true    # https 只读
+mybatis-plus:
+  configuration:
+    # 开发环境打印 SQL 日志(生产环境不配置此段)
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+spring:
+  data:
+    redis:
+      host: 127.0.0.1     # Redis地址
+      port: 6379          # 端口
+      database: 0         # 使用的数据库
+      #password:          # 密码（无密码留空）
+      timeout: 10000      # 超时时间
+      lettuce:
+        pool:
+          max-active: 8     # 最大连接数
+          max-idle: 8       # 最大空闲连接连接
+          min-idle: 2       # 最小空闲连接数  min-idle 推荐 = max-active 的 20% ~ 50%  低并发:（后台、管理系统）→ 0~1 中等并发:（Web 服务、接口一般）→ 2（最常用） 高并发:（秒杀、首页、高频接口）→ 4~8
+          max-wait: 1000ms  # 获取连接超时时间
+  web:
+    resources:
+      # 静态资源位置: 包含上传目录; 数据库保存相对路径, 前端通过 /api 拼接访问
+      static-locations: classpath:/META-INF/resources/, classpath:/resources/, classpath:/static/, classpath:/public/,file:${yaya.file-path}/

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yaya.system.mapper.SysUserMapper">
+
+    <!--
+        自定义 SQL 统一写在本文件(接口中不允许写注解 SQL)
+        继承 BaseMapper 提供的通用方法无需在此声明
+    -->
+
+    <sql id="userVoColumns">
+        u.user_id,
+        u.dept_id,
+        d.dept_name,
+        u.username,
+        u.nickname,
+        u.phone,
+        u.email,
+        u.sex,
+        u.avatar,
+        u.expired_time,
+        u.remark,
+        u.is_locked,
+        u.is_enabled,
+        u.create_by,
+        creator.nickname AS create_by_name,
+        u.create_time,
+        u.update_time
+    </sql>
+
+    <sql id="userFilters">
+        u.is_deleted = 0
+        <if test="username != null and username != ''">
+            AND u.username LIKE CONCAT('%', #{username}, '%')
+        </if>
+        <if test="nickname != null and nickname != ''">
+            AND u.nickname LIKE CONCAT('%', #{nickname}, '%')
+        </if>
+        <if test="deptIds != null and deptIds.size() > 0">
+            AND u.dept_id IN
+            <foreach collection="deptIds" item="deptId" open="(" separator="," close=")">
+                #{deptId}
+            </foreach>
+        </if>
+        <if test="status != null">
+            <choose>
+                <when test="status == 1">
+                    AND u.is_enabled = 1 AND u.is_locked = 0
+                </when>
+                <when test="status == 0">
+                    AND u.is_enabled = 0 AND u.is_locked = 0
+                </when>
+                <when test="status == 2">
+                    AND u.is_locked = 1
+                </when>
+            </choose>
+        </if>
+    </sql>
+
+    <select id="getUserPage" resultType="com.yaya.system.domain.vo.SysUserVo">
+        SELECT
+        <include refid="userVoColumns"/>
+        FROM sys_user u
+        LEFT JOIN sys_dept d ON d.dept_id = u.dept_id
+        LEFT JOIN sys_user creator ON creator.user_id = u.create_by
+        <where>
+            <include refid="userFilters"/>
+        </where>
+        ORDER BY u.create_time DESC, u.user_id DESC
+    </select>
+
+    <select id="getUserDetail" resultType="com.yaya.system.domain.vo.SysUserVo">
+        SELECT
+        <include refid="userVoColumns"/>
+        FROM sys_user u
+        LEFT JOIN sys_dept d ON d.dept_id = u.dept_id
+        LEFT JOIN sys_user creator ON creator.user_id = u.create_by
+        WHERE u.user_id = #{userId}
+          AND u.is_deleted = 0
+    </select>
+
+    <select id="getUserList" resultType="com.yaya.system.domain.vo.SysUserVo">
+        SELECT
+        <include refid="userVoColumns"/>
+        FROM sys_user u
+        LEFT JOIN sys_dept d ON d.dept_id = u.dept_id
+        LEFT JOIN sys_user creator ON creator.user_id = u.create_by
+        <where>
+            <include refid="userFilters"/>
+        </where>
+        ORDER BY u.create_time DESC, u.user_id DESC
+    </select>
+
+    <select id="getUserOptions" resultType="com.yaya.system.domain.vo.SysUserVo">
+        SELECT
+            u.user_id,
+            u.dept_id,
+            u.username,
+            u.nickname
+        FROM sys_user u
+        WHERE u.is_deleted = 0
+          AND u.is_enabled = 1
+          AND u.is_locked = 0
+        <if test="keyword != null and keyword != ''">
+            AND (u.username LIKE CONCAT('%', #{keyword}, '%')
+                 OR u.nickname LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY u.user_id ASC
+        LIMIT 20
+    </select>
+
+    <select id="countByUsername" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_user
+        WHERE username = #{username}
+        <if test="excludeUserId != null">
+            AND user_id != #{excludeUserId}
+        </if>
+    </select>
+
+    <select id="countByPhone" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_user
+        WHERE phone = #{phone}
+          AND is_deleted = 0
+        <if test="excludeUserId != null">
+            AND user_id != #{excludeUserId}
+        </if>
+    </select>
+
+    <select id="countByEmail" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_user
+        WHERE email = #{email}
+          AND is_deleted = 0
+        <if test="excludeUserId != null">
+            AND user_id != #{excludeUserId}
+        </if>
+    </select>
+
+    <select id="countRootRoleByUserId" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_user_role ur
+        INNER JOIN sys_role r ON r.role_id = ur.role_id AND r.is_deleted = 0
+        WHERE ur.user_id = #{userId}
+          AND r.role_code = 'ROOT'
+    </select>
+
+    <select id="selectActiveUserIdByUsername" resultType="long">
+        SELECT user_id
+        FROM sys_user
+        WHERE username = #{username}
+          AND is_deleted = 0
+        LIMIT 1
+    </select>
+
+    <update id="logicDeleteById">
+        UPDATE sys_user
+        SET is_deleted = 1,
+            update_by = #{updateBy},
+            update_time = #{updateTime}
+        WHERE user_id = #{userId}
+          AND is_deleted = 0
+    </update>
+
+</mapper>

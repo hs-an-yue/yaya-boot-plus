@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yaya.system.mapper.SysFileMapper">
+
+    <select id="hasNoticeAttachmentReference" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM sys_notice_file nf
+            INNER JOIN sys_notice n ON n.notice_id = nf.notice_id
+            WHERE nf.file_id = #{fileId}
+              AND n.is_deleted = 0
+        )
+    </select>
+
+    <!-- 包含百分号的 URL 也进入候选集, 避免百分号编码的文件名漏过检查 -->
+    <select id="selectAvatarReferenceCandidates" resultType="string">
+        SELECT avatar
+        FROM sys_user
+        WHERE is_deleted = 0
+          AND (avatar LIKE CONCAT('%', #{fileNamePattern}, '%') ESCAPE '!'
+               OR avatar LIKE '%!%%' ESCAPE '!')
+    </select>
+
+    <select id="selectNoticeContentReferenceCandidates" resultType="string">
+        SELECT notice_content
+        FROM sys_notice
+        WHERE is_deleted = 0
+          AND (notice_content LIKE CONCAT('%', #{fileNamePattern}, '%') ESCAPE '!'
+               OR notice_content LIKE '%!%%' ESCAPE '!'
+               OR notice_content LIKE '%&amp;%')
+    </select>
+
+    <select id="selectFilePage" resultType="com.yaya.system.domain.entity.SysFile">
+        SELECT f.* FROM sys_file f ${ew.customSqlSegment}
+    </select>
+
+</mapper>

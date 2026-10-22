@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <link rel="stylesheet" href="../../font/bootstrap-icons.css">
+    <title>文件管理</title>
+    <style>
+        .preview-scroll {
+            height: 100%;
+            overflow: auto;
+            box-sizing: border-box;
+        }
+        .preview-loading, .preview-error {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #909399;
+            font-size: 14px;
+        }
+        .preview-error {
+            color: #f56c6c;
+        }
+        .excel-preview {
+            background: #fff;
+            padding: 16px;
+        }
+        .excel-preview .sheet-title {
+            margin: 0 0 8px;
+            font-size: 15px;
+            color: #333;
+        }
+        .excel-preview table {
+            border-collapse: collapse;
+            margin: 0 0 18px;
+        }
+        .excel-preview td, .excel-preview th {
+            border: 1px solid #dcdfe6;
+            padding: 4px 10px;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        .preview-text {
+            margin: 0;
+            padding: 16px;
+            min-height: 100%;
+            box-sizing: border-box;
+            background: #fff;
+            color: #333;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 13px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+    </style>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="yaya-panel">
+        <form class="layui-form" style="padding: 10px 0" onsubmit="return false;">
+            <div class="layui-row">
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">文件名称</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="fileName" placeholder="请输入文件名称" autocomplete="off" class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md4 layui-col-sm4 yaya-form-item">
+                    <label class="yaya-form-label">上传时间</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="uploadTimeRange" placeholder="开始时间 - 结束时间" autocomplete="off" readonly class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <button type="button" id="btnSearch" data-perm="file:search" class="yaya-btn yaya-primary">搜索</button>
+                    <button type="button" id="btnReset" class="yaya-btn" style="margin-left: 10px;">重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="yaya-panel" style="margin-top: 10px;">
+        <div style="display: flex;flex-direction: row;justify-content: flex-end;padding: 10px;">
+            <button id="btnUpload" data-perm="file:upload" type="button" class="yaya-btn yaya-primary">上传文件</button>
+        </div>
+        <table class="layui-hide" id="table-file" lay-filter="table-file"></table>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const table = layui.table;
+        const layer = layui.layer;
+        const laydate = layui.laydate;
+
+        const TABLE_ID = 'table-file';
+        const BASE_URL = server_url + '/system/file';
+        // 日期控件主题色跟随模板主色
+        const themeColor = getComputedStyle(document.documentElement).getPropertyValue('--yaya-primary').trim() || '#409eff';
+
+        laydate.render({
+            elem: '#uploadTimeRange',
+            type: 'datetime',
+            range: true,
+            theme: themeColor
+        });
+
+        function buildWhere() {
+            const where = {};
+            const fileName = $.trim($('#fileName').val());
+            if (fileName) {
+                where.fileName = fileName;
+            }
+            const range = $.trim($('#uploadTimeRange').val());
+            if (range) {
+                const parts = range.split(' - ');
+                if (parts.length === 2) {
+                    where.startTime = parts[0];
+                    where.endTime = parts[1];
+                }
+            }
+            return where;
+        }
+
+        function reloadTable() {
+            table.reload(TABLE_ID, {
+                where: buildWhere(),
+                page: {
+                    curr: 1,
+                    prev: '上一页',
+                    next: '下一页',
+                    theme: '#409eff'
+                }
+            });
+        }
+
+        function escapeHtml(text) {
+            return String(text == null ? '' : text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // 支持浏览器直接预览的图片/视频扩展名
+        const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'];
+        const VIDEO_EXTENSIONS = ['mp4', 'webm', 'ogg', 'ogv', 'mov', 'm4v'];
+        const TEXT_EXTENSIONS = ['txt'];
+
+        // 文件类型图标映射(按后缀分类), 匹配不到时使用通用文件图标
+        const FILE_TYPE_ICON_RULES = [
+            {
+                exts: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tif', 'tiff', 'heic'],
+                icon: 'bi-file-earmark-image', color: '#28a745', name: '图片'
+            },
+            {
+                exts: ['mp4', 'webm', 'ogg', 'ogv', 'mov', 'm4v', 'avi', 'mkv', 'wmv', 'flv'],
+                icon: 'bi-file-earmark-play', color: '#dc3545', name: '视频'
+            },
+            {
+                exts: ['mp3', 'wav', 'flac', 'aac', 'm4a', 'wma', 'mid', 'midi'],
+                icon: 'bi-file-earmark-music', color: '#6f42c1', name: '音频'
+            },
+            {exts: ['pdf'], icon: 'bi-file-earmark-pdf', color: '#dc3545', name: 'PDF'},
+            {exts: ['doc', 'docx'], icon: 'bi-file-earmark-word', color: '#2b579a', name: 'Word'},
+            {exts: ['xls', 'xlsx', 'csv'], icon: 'bi-file-earmark-excel', color: '#217346', name: 'Excel'},
+            {exts: ['ppt', 'pptx'], icon: 'bi-file-earmark-ppt', color: '#d24726', name: 'PPT'},
+            {exts: ['zip', 'rar', '7z', 'tar', 'gz', 'bz2'], icon: 'bi-file-earmark-zip', color: '#f59e0b', name: '压缩包'},
+            {
+                exts: ['java', 'js', 'ts', 'html', 'htm', 'css', 'json', 'xml', 'yml', 'yaml', 'py', 'sql', 'md', 'sh', 'bat'],
+                icon: 'bi-file-earmark-code', color: '#0d6efd', name: '代码'
+            },
+            {exts: ['txt', 'log', 'ini', 'properties'], icon: 'bi-file-earmark-text', color: '#6c757d', name: '文本'}
+        ];
+        const DEFAULT_FILE_ICON = {icon: 'bi-file-earmark', color: '#909399', name: '其他'};
+
+        function getExtension(fileName) {
+            const name = String(fileName || '');
+            const index = name.lastIndexOf('.');
+            return index >= 0 ? name.substring(index + 1).toLowerCase() : '';
+        }
+
+        // 优先使用后端返回的 fileExt, 旧数据为空时回退到文件名解析
+        function getFileExt(row) {
+            const ext = row.fileExt || getExtension(row.fileName);
+            return String(ext || '').toLowerCase();
+        }
+
+        function getFileIcon(ext) {
+            return FILE_TYPE_ICON_RULES.find(item => item.exts.includes(ext)) || DEFAULT_FILE_ICON;
+        }
+
+        function isImageExt(ext) {
+            return IMAGE_EXTENSIONS.includes(ext);
+        }
+
+        function isVideoExt(ext) {
+            return VIDEO_EXTENSIONS.includes(ext);
+        }
+
+        function isTextExt(ext) {
+            return TEXT_EXTENSIONS.includes(ext);
+        }
+
+        // 可在线预览的 Office/PDF 格式, 以及浏览器无法渲染的旧版格式
+        const PREVIEW_LIB_PATH = '../../js/lib/';
+        const OFFICE_PREVIEW_EXTENSIONS = ['pdf', 'docx', 'xls', 'xlsx', 'pptx'];
+        const UNSUPPORTED_OFFICE_EXTENSIONS = ['doc', 'ppt'];
+
+        const loadedScripts = {};
+        let previewObjectUrl = null;
+        let previewDestroy = null;
+
+        function canPreview(ext) {
+            return isImageExt(ext) || isVideoExt(ext) || isTextExt(ext)
+                || OFFICE_PREVIEW_EXTENSIONS.includes(ext)
+                || UNSUPPORTED_OFFICE_EXTENSIONS.includes(ext);
+        }
+
+        // PDF和图片只提供预览入口, 不显示下载按钮
+        function isPreviewOnlyExt(ext) {
+            return isImageExt(ext) || ext === 'pdf';
+        }
+
+        // 按需加载预览库, 避免列表页首屏加载大体积脚本
+        function loadScript(src) {
+            if (loadedScripts[src]) {
+                return loadedScripts[src];
+            }
+            loadedScripts[src] = new Promise(function (resolve, reject) {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = function () {
+                    reject(new Error('预览组件加载失败'));
+                };
+                document.head.appendChild(script);
+            });
+            return loadedScripts[src];
+        }
+
+        // 通过同源下载接口读取文件内容(静态地址跨域时浏览器无法用 JS 解析)
+        async function fetchFileBuffer(fileId) {
+            const response = await fetch(server_url + '/system/file/downloadFile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    Authorization: token
+                },
+                body: 'fileId=' + encodeURIComponent(fileId)
+            });
+            const contentType = response.headers.get('Content-Type') || '';
+            if (!response.ok || contentType.indexOf('application/json') >= 0) {
+                let message = '文件读取失败';
+                try {
+                    const result = await response.json();
+                    if (result && result.msg) {
+                        message = result.msg;
+                    }
+                } catch (ignored) {
+                }
+                throw new Error(message);
+            }
+            return await response.arrayBuffer();
+        }
+
+        function resolveDownloadName(disposition, fallback) {
+            const header = String(disposition || '');
+            const utf8 = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(header);
+            if (utf8) {
+                try {
+                    return decodeURIComponent(utf8[1].trim());
+                } catch (ignored) {
+                }
+            }
+            const quoted = /filename\s*=\s*"([^"]+)"/i.exec(header);
+            if (quoted) {
+                return quoted[1];
+            }
+            const plain = /filename\s*=\s*([^;]+)/i.exec(header);
+            return plain ? plain[1].trim() : fallback;
+        }
+
+        // 非 PDF/图片通过鉴权下载接口获取文件流, 强制触发附件下载
+        async function downloadFile(row) {
+            if (!row || !row.fileId) {
+                layer.msg('文件ID不存在');
+                return;
+            }
+            const loading = layer.load(0);
+            try {
+                const response = await fetch(server_url + '/system/file/downloadFile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        Authorization: token
+                    },
+                    body: 'fileId=' + encodeURIComponent(row.fileId)
+                });
+                const contentType = response.headers.get('Content-Type') || '';
+                if (!response.ok || contentType.indexOf('application/json') >= 0) {
+                    let message = '文件下载失败';
+                    try {
+                        const result = await response.json();
+                        if (result && result.msg) {
+                            message = result.msg;
+                        }
+                    } catch (ignored) {
+                    }
+                    throw new Error(message);
+                }
+                const blob = await response.blob();
+                const filename = resolveDownloadName(
+                    response.headers.get('Content-Disposition'), row.fileName || 'download');
+                const objectUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = objectUrl;
+                link.download = filename;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(function () {
+                    URL.revokeObjectURL(objectUrl);
+                }, 1000);
+            } catch (e) {
+                layer.msg(e.message || '文件下载失败，请稍后重试');
+            } finally {
+                layer.close(loading);
+            }
+        }
+
+        // 文本预览按 UTF-8 解码, 兼容 BOM 和中文 Windows 常见的 GB18030 编码
+        function decodeTextBuffer(buffer) {
+            const bytes = new Uint8Array(buffer);
+            if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+                return new TextDecoder('utf-8').decode(bytes.subarray(3));
+            }
+            if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+                return new TextDecoder('utf-16le').decode(bytes.subarray(2));
+            }
+            if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
+                return new TextDecoder('utf-16be').decode(bytes.subarray(2));
+            }
+            try {
+                return new TextDecoder('utf-8', {fatal: true}).decode(bytes);
+            } catch (utf8Error) {
+                try {
+                    return new TextDecoder('gb18030').decode(bytes);
+                } catch (gbError) {
+                    return new TextDecoder('utf-8').decode(bytes);
+                }
+            }
+        }
+
+        function openTextPreview(row) {
+            const title = escapeHtml(row.fileName);
+            layer.open({
+                type: 1,
+                title: '预览 - ' + title,
+                area: ['90%', '90%'],
+                shadeClose: true,
+                content: '<div class="preview-scroll"><div class="preview-loading">正在加载预览...</div></div>',
+                success: function (layero) {
+                    const container = layero.find('.preview-scroll')[0];
+                    (async function () {
+                        try {
+                            const buffer = await fetchFileBuffer(row.fileId);
+                            container.innerHTML = '';
+                            const pre = document.createElement('pre');
+                            pre.className = 'preview-text';
+                            // 使用 textContent, 文本中的 HTML 标签按原文显示, 避免 XSS
+                            pre.textContent = decodeTextBuffer(buffer);
+                            container.appendChild(pre);
+                        } catch (e) {
+                            container.innerHTML = '<div class="preview-error">预览失败：'
+                                + escapeHtml(e.message) + '</div>';
+                        }
+                    })();
+                }
+            });
+        }
+
+        function openOfficePreview(row, ext) {
+            if (UNSUPPORTED_OFFICE_EXTENSIONS.includes(ext)) {
+                layer.msg('该格式暂不支持在线预览，请下载后查看');
+                return;
+            }
+            const title = escapeHtml(row.fileName);
+            layer.open({
+                type: 1,
+                title: '预览 - ' + title,
+                area: ['90%', '90%'],
+                shadeClose: true,
+                content: '<div class="preview-scroll"><div class="preview-loading">正在加载预览...</div></div>',
+                success: function (layero) {
+                    renderOfficePreview(row, ext, layero.find('.preview-scroll')[0]);
+                },
+                end: function () {
+                    if (previewObjectUrl) {
+                        URL.revokeObjectURL(previewObjectUrl);
+                        previewObjectUrl = null;
+                    }
+                    if (previewDestroy) {
+                        try {
+                            previewDestroy();
+                        } catch (ignored) {
+                        }
+                        previewDestroy = null;
+                    }
+                }
+            });
+        }
+
+        async function renderOfficePreview(row, ext, container) {
+            try {
+                if (ext === 'pdf') {
+                    const buffer = await fetchFileBuffer(row.fileId);
+                    previewObjectUrl = URL.createObjectURL(new Blob([buffer], {type: 'application/pdf'}));
+                    container.innerHTML = '<iframe src="' + previewObjectUrl
+                        + '" style="width:100%;height:100%;border:none;"></iframe>';
+                } else if (ext === 'docx') {
+                    await loadScript(PREVIEW_LIB_PATH + 'jszip.min.js');
+                    await loadScript(PREVIEW_LIB_PATH + 'docx-preview.min.js');
+                    const buffer = await fetchFileBuffer(row.fileId);
+                    container.innerHTML = '';
+                    container.style.background = '#f5f5f5';
+                    container.style.padding = '16px';
+                    await window.docx.renderAsync(buffer, container, container, {
+                        inWrapper: true,
+                        breakPages: true
+                    });
+                } else if (ext === 'xls' || ext === 'xlsx') {
+                    await loadScript(PREVIEW_LIB_PATH + 'xlsx.full.min.js');
+                    const buffer = await fetchFileBuffer(row.fileId);
+                    const workbook = window.XLSX.read(buffer, {type: 'array'});
+                    let html = '';
+                    workbook.SheetNames.forEach(function (name) {
+                        html += '<div class="sheet-title">' + escapeHtml(name) + '</div>'
+                            + window.XLSX.utils.sheet_to_html(workbook.Sheets[name]);
+                    });
+                    container.classList.add('excel-preview');
+                    container.innerHTML = html || '<div class="preview-error">表格内容为空</div>';
+                } else if (ext === 'pptx') {
+                    await loadScript(PREVIEW_LIB_PATH + 'pptx-preview.umd.js');
+                    const buffer = await fetchFileBuffer(row.fileId);
+                    container.innerHTML = '';
+                    container.style.background = '#f5f5f5';
+                    container.style.padding = '16px';
+                    const width = Math.max(container.clientWidth - 32, 640);
+                    const previewer = window.pptxPreview.init(container, {
+                        width: width,
+                        height: Math.round(width * 9 / 16)
+                    });
+                    previewer.preview(buffer);
+                    previewDestroy = function () {
+                        previewer.destroy();
+                    };
+                } else {
+                    container.innerHTML = '<div class="preview-error">该格式暂不支持在线预览</div>';
+                }
+            } catch (e) {
+                container.innerHTML = '<div class="preview-error">预览失败：' + escapeHtml(e.message) + '</div>';
+            }
+        }
+
+        function previewFile(row) {
+            const ext = getFileExt(row);
+            if (isImageExt(ext) || isVideoExt(ext)) {
+                const resolvedUrl = window.yaya_resolve_file_url(row.fileServerUrl);
+                if (!resolvedUrl) {
+                    layer.msg('文件地址不存在');
+                    return;
+                }
+                const url = escapeHtml(resolvedUrl);
+                const title = escapeHtml(row.fileName);
+                let content;
+                if (isImageExt(ext)) {
+                    content = '<div style="height:100%;display:flex;align-items:center;justify-content:center;background:#f5f5f5;">'
+                        + '<img src="' + url + '" alt="' + title + '" style="max-width:100%;max-height:100%;"></div>';
+                } else {
+                    content = '<div style="height:100%;display:flex;align-items:center;justify-content:center;background:#000;">'
+                        + '<video src="' + url + '" controls autoplay style="max-width:100%;max-height:100%;"></video></div>';
+                }
+                layer.open({
+                    type: 1,
+                    title: '预览 - ' + title,
+                    area: ['800px', '80%'],
+                    shadeClose: true,
+                    content: content
+                });
+                return;
+            }
+            if (isTextExt(ext)) {
+                openTextPreview(row);
+                return;
+            }
+            if (OFFICE_PREVIEW_EXTENSIONS.includes(ext) || UNSUPPORTED_OFFICE_EXTENSIONS.includes(ext)) {
+                openOfficePreview(row, ext);
+            }
+        }
+
+        table.render({
+            elem: '#table-file',
+            id: TABLE_ID,
+            url: BASE_URL + '/getFilePage',
+            method: 'post',
+            headers: {
+                Authorization: token
+            },
+            contentType: 'application/json',
+            request: {
+                pageName: 'pageNum',
+                limitName: 'pageSize'
+            },
+            where: buildWhere(),
+            parseData: function (res) {
+                return {
+                    code: res.code,
+                    msg: res.msg,
+                    count: (res.data && res.data.total) || 0,
+                    data: (res.data && res.data.records) || []
+                };
+            },
+            skin: 'line',
+            page: {
+                prev: '上一页',
+                next: '下一页',
+                theme: '#409eff'
+            },
+            limit: 10,
+            limits: [10, 20, 50],
+            defaultToolbar: [],
+            cols: [[
+                {field: 'fileId', title: '文件ID', width: 200},
+                {
+                    title: '类型',
+                    width: 80,
+                    align: 'center',
+                    templet: function (row) {
+                        const type = getFileIcon(getFileExt(row));
+                        return '<i class="bi ' + type.icon + '" title="' + type.name + '" style="color:' + type.color + ';font-size:16px;"></i>';
+                    }
+                },
+                {field: 'fileName', title: '文件名称', minWidth: 200},
+                {
+                    title: '访问地址',
+                    minWidth: 320,
+                    templet: function (row) {
+                        const resolvedUrl = window.yaya_resolve_file_url(row.fileServerUrl);
+                        if (!resolvedUrl) {
+                            return '-';
+                        }
+                        const url = escapeHtml(resolvedUrl);
+                        return '<a href="' + url + '" target="_blank" rel="noopener" style="color: var(--yaya-primary);word-break:break-all;">'
+                            + url + '</a>';
+                    }
+                },
+                {field: 'createTime', title: '上传时间', width: 180},
+                {
+                    title: '操作',
+                    width: 220,
+                    templet: function (row) {
+                        const ext = getFileExt(row);
+                        const actions = [];
+                        if (canPreview(ext)) {
+                            actions.push({
+                                text: '预览', event: 'preview',
+                                className: 'yaya-btn is-link-success yaya-btn-small'
+                            });
+                        }
+                        if (!isPreviewOnlyExt(ext)) {
+                            actions.push({text: '下载', event: 'download'});
+                        }
+                        actions.push({
+                            text: '删除', event: 'delete', perm: 'file:del',
+                            className: 'yaya-btn is-link-danger yaya-btn-small'
+                        });
+                        return window.yaya_permission_actions(actions);
+                    }
+                }
+            ]]
+        });
+
+        // 弹出独立的上传页面, 在弹窗中选择/拖拽文件后点击提交上传
+        $('#btnUpload').on('click', function () {
+            layer.open({
+                type: 2,
+                title: '上传文件',
+                area: ['640px', '460px'],
+                shadeClose: true,
+                content: 'file-upload.html',
+                end: function () {
+                    reloadTable();
+                }
+            });
+        });
+
+        $('#btnSearch').on('click', reloadTable);
+        $('#btnReset').on('click', function () {
+            $('#fileName').val('');
+            $('#uploadTimeRange').val('');
+            reloadTable();
+        });
+
+        table.on('tool(' + TABLE_ID + ')', function (obj) {
+            if (obj.event === 'preview') {
+                previewFile(obj.data);
+            } else if (obj.event === 'download') {
+                downloadFile(obj.data);
+            } else if (obj.event === 'delete') {
+                layer.confirm('确定删除文件「' + escapeHtml(obj.data.fileName) + '」吗？', {
+                    title: '提示'
+                }, function (index) {
+                    layer.close(index);
+                    $.ajax({
+                        url: BASE_URL + '/deleteFile',
+                        method: 'POST',
+                        headers: {
+                            Authorization: token
+                        },
+                        data: {
+                            fileId: obj.data.fileId
+                        },
+                        dataType: 'json',
+                        success: function (resp) {
+                            layer.msg(resp.msg);
+                            if (resp.code === 0) {
+                                reloadTable();
+                            }
+                        },
+                        error: function () {
+                            layer.msg('请求失败，请稍后重试');
+                        }
+                    });
+                });
+            }
+        });
+    });
+</script>
+</body>
+</html>

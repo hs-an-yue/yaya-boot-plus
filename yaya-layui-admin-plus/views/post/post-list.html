@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <title>岗位管理</title>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="yaya-panel">
+        <form class="layui-form" style="padding: 10px 0" onsubmit="return false;">
+            <div class="layui-row">
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">岗位名称</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="postName" placeholder="请输入岗位名称" autocomplete="off" class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">岗位编号</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="postCode" placeholder="请输入岗位编号" autocomplete="off" class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">状态</label>
+                    <div class="yaya-input-block">
+                        <select id="status">
+                            <option value="">全部</option>
+                            <option value="1">正常</option>
+                            <option value="0">停用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <button type="button" id="btnSearch" data-perm="post:search" class="yaya-btn yaya-primary">搜索</button>
+                    <button type="button" id="btnReset" class="yaya-btn" style="margin-left: 10px;">重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="yaya-panel" style="margin-top: 10px;">
+        <div style="display: flex;flex-direction: row;justify-content: flex-end;padding: 10px;">
+            <button id="btnAdd" data-perm="post:add" type="button" class="yaya-btn yaya-primary">新增岗位</button>
+        </div>
+        <table class="layui-hide" id="table-post" lay-filter="table-post"></table>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const table = layui.table;
+        const layer = layui.layer;
+        const form = layui.form;
+
+        const TABLE_ID = 'table-post';
+        const BASE_URL = server_url + '/system/post';
+
+        function escapeHtml(text) {
+            return String(text == null ? '' : text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function buildWhere() {
+            const where = {};
+            const postName = $.trim($('#postName').val());
+            const postCode = $.trim($('#postCode').val());
+            const status = $('#status').val();
+            if (postName) {
+                where.postName = postName;
+            }
+            if (postCode) {
+                where.postCode = postCode;
+            }
+            if (status !== '') {
+                where.status = Number(status);
+            }
+            return where;
+        }
+
+        function reloadTable() {
+            table.reload(TABLE_ID, {
+                where: buildWhere(),
+                page: {
+                    curr: 1,
+                    prev: '上一页',
+                    next: '下一页',
+                    theme: '#409eff'
+                }
+            });
+        }
+
+        table.render({
+            elem: '#table-post',
+            id: TABLE_ID,
+            url: BASE_URL + '/getPostPage',
+            method: 'post',
+            headers: {
+                Authorization: token
+            },
+            contentType: 'application/json',
+            request: {
+                pageName: 'pageNum',
+                limitName: 'pageSize'
+            },
+            where: buildWhere(),
+            parseData: function (res) {
+                return {
+                    code: res.code,
+                    msg: res.msg,
+                    count: (res.data && res.data.total) || 0,
+                    data: (res.data && res.data.records) || []
+                };
+            },
+            skin: 'line',
+            page: {
+                prev: '上一页',
+                next: '下一页',
+                theme: '#409eff'
+            },
+            limit: 10,
+            limits: [10, 20, 50],
+            defaultToolbar: [],
+            cols: [[
+                {field: 'postName', title: '岗位名称', minWidth: 140},
+                {field: 'postCode', title: '岗位编号', width: 140},
+                {
+                    field: 'deptName',
+                    title: '所属部门',
+                    width: 130,
+                    templet: function (row) {
+                        return escapeHtml(row.deptName) || '-';
+                    }
+                },
+                {
+                    title: '状态',
+                    width: 80,
+                    align: 'center',
+                    templet: function (row) {
+                        if (Number(row.status) === 1) {
+                            return '<span class="yaya-tag yaya-tag-plain-success is-round tag-small">正常</span>';
+                        }
+                        return '<span class="yaya-tag yaya-tag-plain-danger is-round tag-small">停用</span>';
+                    }
+                },
+                {
+                    field: 'remark',
+                    title: '备注',
+                    minWidth: 140,
+                    templet: function (row) {
+                        return escapeHtml(row.remark) || '-';
+                    }
+                },
+                {
+                    field: 'createByName',
+                    title: '创建人',
+                    width: 110,
+                    templet: function (row) {
+                        return escapeHtml(row.createByName) || '-';
+                    }
+                },
+                {field: 'createTime', title: '创建时间', width: 170},
+                {
+                    title: '操作',
+                    fixed: 'right',
+                    width: 220,
+                    templet: function (row) {
+                        const enabled = Number(row.status) === 1;
+                        return window.yaya_permission_actions([
+                            {text: '编辑', event: 'edit', perm: 'post:update'},
+                            {
+                                text: enabled ? '停用' : '启用',
+                                event: 'status',
+                                perm: enabled ? 'post:disable' : 'post:enable',
+                                className: 'yaya-btn is-link-success yaya-btn-small'
+                            },
+                            {
+                                text: '删除', event: 'delete', perm: 'post:del',
+                                className: 'yaya-btn is-link-danger yaya-btn-small'
+                            }
+                        ]);
+                    }
+                }
+            ]]
+        });
+
+        function openForm(postId) {
+            let content = 'post-add.html';
+            if (postId) {
+                content = 'post-edit.html?postId=' + encodeURIComponent(postId);
+            }
+            layer.open({
+                type: 2,
+                title: postId ? '编辑岗位' : '新增岗位',
+                area: ['640px', '80%'],
+                shadeClose: true,
+                content: content,
+                end: function () {
+                    reloadTable();
+                }
+            });
+        }
+
+        function toggleStatus(row) {
+            const targetStatus = Number(row.status) === 1 ? 0 : 1;
+            const actionText = targetStatus === 1 ? '启用' : '停用';
+            layer.confirm('确定' + actionText + '岗位「' + escapeHtml(row.postName) + '」吗？', {
+                title: '提示'
+            }, function (index) {
+                layer.close(index);
+                $.ajax({
+                    url: BASE_URL + '/updatePostStatus',
+                    method: 'POST',
+                    headers: {
+                        Authorization: token
+                    },
+                    data: {
+                        postId: row.postId,
+                        status: targetStatus
+                    },
+                    dataType: 'json',
+                    success: function (resp) {
+                        layer.msg(resp.msg);
+                        if (resp.code === 0) {
+                            reloadTable();
+                        }
+                    },
+                    error: function () {
+                        layer.msg('请求失败，请稍后重试');
+                    }
+                });
+            });
+        }
+
+        function deletePost(row) {
+            layer.confirm('确定删除岗位「' + escapeHtml(row.postName) + '」吗？', {
+                title: '提示'
+            }, function (index) {
+                layer.close(index);
+                $.ajax({
+                    url: BASE_URL + '/deletePost',
+                    method: 'POST',
+                    headers: {
+                        Authorization: token
+                    },
+                    data: {
+                        postId: row.postId
+                    },
+                    dataType: 'json',
+                    success: function (resp) {
+                        layer.msg(resp.msg);
+                        if (resp.code === 0) {
+                            reloadTable();
+                        }
+                    },
+                    error: function () {
+                        layer.msg('请求失败，请稍后重试');
+                    }
+                });
+            });
+        }
+
+        $('#btnSearch').on('click', reloadTable);
+        $('#btnReset').on('click', function () {
+            $('#postName').val('');
+            $('#postCode').val('');
+            $('#status').val('');
+            form.render('select');
+            reloadTable();
+        });
+        $('#btnAdd').on('click', function () {
+            openForm();
+        });
+
+        table.on('tool(' + TABLE_ID + ')', function (obj) {
+            if (obj.event === 'edit') {
+                openForm(obj.data.postId);
+            } else if (obj.event === 'status') {
+                toggleStatus(obj.data);
+            } else if (obj.event === 'delete') {
+                deletePost(obj.data);
+            }
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <title>我的消息</title>
+    <style>
+        .notice-center-shell {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 6px 0 24px;
+        }
+
+        .notice-page-head {
+            padding: 18px 0 22px;
+            text-align: center;
+        }
+
+        .notice-page-title {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+            line-height: 32px;
+            color: var(--yaya-text-1);
+        }
+
+        .notice-page-sub {
+            margin-top: 8px;
+            font-size: 13px;
+            color: var(--yaya-text-4);
+        }
+
+        .notice-unread-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 6px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            color: var(--yaya-primary);
+            background: var(--yaya-primary-bg);
+            border: 1px solid var(--yaya-primary-border);
+        }
+
+        .notice-card-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+            padding: 0 10px;
+        }
+
+        .notice-item {
+            position: relative;
+            padding: 20px 22px;
+            cursor: pointer;
+            background: var(--yaya-card);
+            border: 1px solid #ebeef5;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, .05);
+            transition: all .25s cubic-bezier(.25, .8, .25, 1);
+        }
+
+        .notice-item:hover {
+            transform: translateY(-3px);
+            border-color: var(--yaya-primary-border);
+            box-shadow: 0 8px 24px 0 rgba(0, 0, 0, .09);
+        }
+
+        .notice-item.is-unread::before {
+            content: '';
+            position: absolute;
+            left: -1px;
+            top: 18px;
+            bottom: 18px;
+            width: 3px;
+            border-radius: 0 3px 3px 0;
+            background: var(--yaya-primary);
+        }
+
+        .notice-item.is-read {
+            background: #fcfcfd;
+        }
+
+        .notice-item.is-read .notice-item-title {
+            color: var(--yaya-text-2);
+            font-weight: 500;
+        }
+
+        .notice-item-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .notice-item-title {
+            margin: 0;
+            flex: 1;
+            min-width: 0;
+            font-size: 17px;
+            font-weight: 600;
+            line-height: 25px;
+            color: var(--yaya-text-1);
+            word-break: break-word;
+            transition: color .2s ease;
+        }
+
+        .notice-item:hover .notice-item-title {
+            color: var(--yaya-primary);
+        }
+
+        .notice-item-badges {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            flex: 0 0 auto;
+            padding-top: 2px;
+        }
+
+        .notice-level-badge {
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .notice-level-badge.level-1 {
+            color: #fff;
+            background: var(--yaya-warning);
+        }
+
+        .notice-level-badge.level-2 {
+            color: #fff;
+            background: var(--yaya-danger);
+        }
+
+        .notice-top-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            color: var(--yaya-primary);
+            background: var(--yaya-primary-bg);
+            border: 1px solid var(--yaya-primary-border);
+        }
+
+        .notice-item-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--yaya-text-4);
+        }
+
+        .notice-item-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .notice-item-meta .notice-type {
+            padding: 1px 7px;
+            border-radius: 9px;
+            color: var(--yaya-text-3);
+            background: var(--yaya-gray-200);
+        }
+
+        .notice-read-text.is-unread {
+            color: var(--yaya-primary);
+        }
+
+        .notice-read-text.is-read {
+            color: var(--yaya-text-4);
+        }
+
+        .notice-item-summary {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            overflow: hidden;
+            margin-top: 10px;
+            font-size: 13px;
+            line-height: 22px;
+            color: var(--yaya-text-3);
+            word-break: break-all;
+        }
+
+        .notice-empty {
+            padding: 64px 20px;
+            text-align: center;
+            border-radius: 12px;
+            background: var(--yaya-card);
+            border: 1px solid #ebeef5;
+            color: var(--yaya-text-4);
+            font-size: 13px;
+        }
+
+        .notice-empty .layui-icon {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 38px;
+            color: var(--yaya-gray-400);
+        }
+
+        .notice-sentinel {
+            display: none;
+            min-height: 54px;
+            padding: 18px 10px 8px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--yaya-text-4);
+            user-select: none;
+        }
+
+        .notice-sentinel.is-show {
+            display: block;
+        }
+
+        .notice-sentinel-item {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .notice-sentinel.is-idle .notice-sentinel-more,
+        .notice-sentinel.is-loading .notice-sentinel-loading,
+        .notice-sentinel.is-end .notice-sentinel-end,
+        .notice-sentinel.is-error .notice-sentinel-retry {
+            display: inline-flex;
+        }
+
+        .notice-sentinel.is-error .notice-sentinel-retry {
+            color: var(--yaya-primary);
+            cursor: pointer;
+        }
+
+        .notice-sentinel .layui-icon-loading {
+            font-size: 14px;
+        }
+
+        @media (max-width: 680px) {
+            .notice-center-shell {
+                padding-top: 0;
+            }
+
+            .notice-page-title {
+                font-size: 21px;
+            }
+
+            .notice-item {
+                padding: 16px;
+            }
+
+            .notice-item-title {
+                font-size: 15px;
+                line-height: 22px;
+            }
+
+            .notice-item-meta {
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="notice-center-shell">
+        <header class="notice-page-head">
+            <h1 class="notice-page-title">我的消息</h1>
+            <p class="notice-page-sub">
+                查看发送给我的公告通知
+                <span class="notice-unread-chip" id="unreadChip" style="display:none;">
+                    未读 <b id="unreadBadge">0</b>
+                </span>
+            </p>
+        </header>
+
+        <div id="noticeList" class="notice-card-list"></div>
+
+        <div id="noticeSentinel" class="notice-sentinel">
+            <div class="notice-sentinel-item notice-sentinel-more">继续向下滚动加载更多</div>
+            <div class="notice-sentinel-item notice-sentinel-loading">
+                <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i>
+                加载中...
+            </div>
+            <div class="notice-sentinel-item notice-sentinel-end">没有更多消息了</div>
+            <div class="notice-sentinel-item notice-sentinel-retry">加载失败，点击重试</div>
+        </div>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+
+        const BASE_URL = server_url + '/system/notice';
+        const PAGE_SIZE = 10;
+
+        let pageNum = 1;
+        let total = 0;
+        let loadedCount = 0;
+        let loading = false;
+        let hasMore = true;
+        let loadError = false;
+
+        function escapeHtml(text) {
+            return String(text == null ? '' : text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function levelBadge(level) {
+            const value = Number(level);
+            if (value === 2) {
+                return '<span class="notice-level-badge level-2">紧急</span>';
+            }
+            if (value === 1) {
+                return '<span class="notice-level-badge level-1">重要</span>';
+            }
+            return '';
+        }
+
+        function cardHtml(item) {
+            const read = Number(item.isRead) === 1;
+            return '<article class="notice-item ' + (read ? 'is-read' : 'is-unread')
+                + '" data-notice-id="' + escapeHtml(item.noticeId) + '">'
+                + '<div class="notice-item-head">'
+                + '<h2 class="notice-item-title">' + escapeHtml(item.noticeTitle) + '</h2>'
+                + '<div class="notice-item-badges">'
+                + (Number(item.isTop) === 1 ? '<span class="notice-top-badge">置顶</span>' : '')
+                + levelBadge(item.noticeLevel)
+                + '</div></div>'
+                + '<div class="notice-item-meta">'
+                + '<span><i class="layui-icon layui-icon-username"></i>发布人：'
+                + (escapeHtml(item.createByName) || '-') + '</span>'
+                + '<span><i class="layui-icon layui-icon-date"></i>时间：'
+                + (escapeHtml(item.publishTime) || '-') + '</span>'
+                + '<span class="notice-type"><i class="layui-icon layui-icon-file-b"></i>'
+                + (escapeHtml(item.noticeTypeName) || '公告') + '</span>'
+                + '<span class="notice-read-text ' + (read ? 'is-read' : 'is-unread') + '">'
+                + (read ? '已读' : '未读') + '</span>'
+                + '</div>'
+                + '<div class="notice-item-summary">'
+                + (escapeHtml(item.noticeSummary) || '暂无摘要')
+                + '</div>'
+                + '</article>';
+        }
+
+        function updateSentinel() {
+            const sentinel = $('#noticeSentinel');
+            sentinel.removeClass('is-idle is-loading is-end is-error');
+            if (loadError) {
+                sentinel.addClass('is-show is-error');
+                return;
+            }
+            if (loading) {
+                sentinel.addClass('is-show is-loading');
+                return;
+            }
+            if (total === 0) {
+                sentinel.removeClass('is-show');
+                return;
+            }
+            if (hasMore) {
+                sentinel.addClass('is-show is-idle');
+            } else {
+                sentinel.addClass('is-show is-end');
+            }
+        }
+
+        let detailOpen = false;
+
+        function updateCardRead(noticeId) {
+            const card = $('#noticeList .notice-item[data-notice-id="' + noticeId + '"]');
+            if (!card.length) {
+                return;
+            }
+            card.removeClass('is-unread').addClass('is-read');
+            card.find('.notice-read-text').removeClass('is-unread').addClass('is-read').text('已读');
+        }
+
+        function onDetailClosed(noticeId, wasUnread) {
+            detailOpen = false;
+            if (!wasUnread) {
+                return;
+            }
+            $.ajax({
+                url: BASE_URL + '/markNoticeRead',
+                method: 'POST',
+                headers: {Authorization: token},
+                data: {noticeId: noticeId},
+                dataType: 'json',
+                success: function (resp) {
+                    if (resp.code === 0) {
+                        updateCardRead(noticeId);
+                        refreshUnread();
+                    }
+                }
+            });
+        }
+
+        function openDetail(noticeId, wasUnread) {
+            if (detailOpen) {
+                return;
+            }
+            detailOpen = true;
+            const embedded = window.self !== window.top
+                && window.parent && window.parent.layer;
+            const ownerLayer = embedded ? window.parent.layer : layer;
+            const content = embedded
+                ? 'views/notice/notice-user-detail.html?noticeId=' + encodeURIComponent(noticeId)
+                : 'notice-user-detail.html?noticeId=' + encodeURIComponent(noticeId);
+            ownerLayer.open({
+                type: 2,
+                title: '消息详情',
+                area: ['76%', '82%'],
+                maxmin: true,
+                shadeClose: true,
+                content: content,
+                success: function (layero) {
+                    // 详情仅保留最大化与关闭，移除窗口最小化按钮
+                    layero.find('.layui-layer-min').remove();
+                },
+                end: function () {
+                    onDetailClosed(noticeId, wasUnread);
+                }
+            });
+        }
+
+        function updateUnread(count) {
+            const unread = Number(count || 0);
+            $('#unreadBadge').text(unread);
+            $('#unreadChip').toggle(unread > 0);
+            if (window.parent && typeof window.parent.updateNoticeUnreadCount === 'function') {
+                window.parent.updateNoticeUnreadCount(unread);
+            }
+        }
+
+        function refreshUnread() {
+            $.ajax({
+                url: BASE_URL + '/getUnreadNoticeCount',
+                method: 'POST',
+                headers: {Authorization: token},
+                dataType: 'json',
+                success: function (resp) {
+                    if (resp.code === 0) {
+                        updateUnread(resp.data);
+                    }
+                }
+            });
+        }
+
+        function showEmpty() {
+            $('#noticeList').html('<div class="notice-empty">'
+                + '<i class="layui-icon layui-icon-notice"></i>暂无消息</div>');
+        }
+
+        function loadPage(reset) {
+            if (loading) {
+                return;
+            }
+            if (!reset && !hasMore) {
+                return;
+            }
+            if (reset) {
+                pageNum = 1;
+                total = 0;
+                loadedCount = 0;
+                hasMore = true;
+                loadError = false;
+                $('#noticeList').empty();
+            }
+            loading = true;
+            loadError = false;
+            updateSentinel();
+            $.ajax({
+                url: BASE_URL + '/getMyNoticePage',
+                method: 'POST',
+                contentType: 'application/json',
+                headers: {Authorization: token},
+                data: JSON.stringify({
+                    pageNum: pageNum,
+                    pageSize: PAGE_SIZE
+                }),
+                dataType: 'json',
+                success: function (resp) {
+                    if (resp.code !== 0) {
+                        loadError = true;
+                        if (loadedCount === 0) {
+                            $('#noticeList').html('<div class="notice-empty">'
+                                + escapeHtml(resp.msg) + '</div>');
+                        }
+                        return;
+                    }
+                    const data = resp.data || {};
+                    const records = data.records || [];
+                    total = Number(data.total || 0);
+                    if (records.length === 0) {
+                        hasMore = false;
+                        if (loadedCount === 0) {
+                            showEmpty();
+                        }
+                    } else {
+                        $('#noticeList').append(records.map(cardHtml).join(''));
+                        loadedCount += records.length;
+                        pageNum++;
+                        hasMore = loadedCount < total;
+                    }
+                    refreshUnread();
+                },
+                error: function () {
+                    loadError = true;
+                    if (loadedCount === 0) {
+                        $('#noticeList').html('<div class="notice-empty">消息加载失败，请稍后重试</div>');
+                    }
+                },
+                complete: function () {
+                    loading = false;
+                    updateSentinel();
+                    // 首屏不足一屏时自动加载下一页，避免观察器迟迟不触发
+                    if (!loadError && hasMore) {
+                        setTimeout(checkSentinelVisible, 80);
+                    }
+                }
+            });
+        }
+
+        function checkSentinelVisible() {
+            if (loading || loadError || !hasMore) {
+                return;
+            }
+            const sentinel = document.getElementById('noticeSentinel');
+            if (!sentinel) {
+                return;
+            }
+            const rect = sentinel.getBoundingClientRect();
+            if (rect.top < window.innerHeight + 120) {
+                loadPage(false);
+            }
+        }
+
+        function initInfiniteScroll() {
+            if ('IntersectionObserver' in window) {
+                const observer = new IntersectionObserver(function (entries) {
+                    if (entries[0] && entries[0].isIntersecting) {
+                        loadPage(false);
+                    }
+                }, {rootMargin: '160px 0px'});
+                observer.observe(document.getElementById('noticeSentinel'));
+            }
+            $(window).on('scroll', function () {
+                if (loading || loadError || !hasMore) {
+                    return;
+                }
+                const scrollTop = $(window).scrollTop() || document.documentElement.scrollTop;
+                const viewport = window.innerHeight || document.documentElement.clientHeight;
+                const fullHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+                if (scrollTop + viewport >= fullHeight - 180) {
+                    loadPage(false);
+                }
+            });
+            $('#noticeSentinel').on('click', '.notice-sentinel-retry', function () {
+                if (!loading) {
+                    loadPage(false);
+                }
+            });
+        }
+
+        $('#noticeList').on('click', '.notice-item', function () {
+            openDetail($(this).data('notice-id'), !$(this).hasClass('is-read'));
+        });
+
+        initInfiniteScroll();
+        loadPage(true);
+    });
+</script>
+</body>
+</html>

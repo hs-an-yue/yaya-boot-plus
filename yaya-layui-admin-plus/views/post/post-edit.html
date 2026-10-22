@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <link rel="stylesheet" href="../../font/bootstrap-icons.css">
+    <title>岗位编辑</title>
+    <style>
+        html, body {
+            height: 100%;
+        }
+        body {
+            overflow-y: auto;
+        }
+        .yaya-box-fluid {
+            padding-bottom: 24px;
+        }
+        .layui-form-label {
+            width: 100px;
+        }
+        .layui-input-block {
+            margin-left: 130px;
+        }
+        .yaya-form-hint {
+            margin-top: 4px;
+            font-size: 12px;
+            color: var(--yaya-text-4);
+            line-height: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="layui-fluid">
+        <form class="layui-form" lay-filter="postForm" style="margin-top: 10px;">
+            <input type="hidden" name="postId">
+            <div class="layui-form-item">
+                <label class="layui-form-label">岗位名称</label>
+                <div class="layui-input-block">
+                    <input type="text" name="postName" lay-verify="required" maxlength="200"
+                           placeholder="请输入岗位名称" autocomplete="off" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">岗位编号</label>
+                <div class="layui-input-block">
+                    <input type="text" name="postCode" lay-verify="required" maxlength="200"
+                           placeholder="例如 manager" autocomplete="off" class="layui-input">
+                    <div class="yaya-form-hint">岗位编号全局唯一，保存后不可与其它岗位重复</div>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">状态</label>
+                <div class="layui-input-block">
+                    <input type="radio" name="status" value="1" title="正常" checked>
+                    <input type="radio" name="status" value="0" title="停用">
+                </div>
+            </div>
+            <div class="layui-form-item layui-form-text">
+                <label class="layui-form-label">备注</label>
+                <div class="layui-input-block">
+                    <textarea name="remark" maxlength="500" placeholder="请输入备注" class="layui-textarea"></textarea>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button type="button" id="btnSave" data-perm="post:update" class="yaya-btn yaya-primary" lay-submit lay-filter="save">保存</button>
+                    <button type="button" class="yaya-btn" id="btnCancel" style="margin-left: 10px;">取消</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const layer = layui.layer;
+        const form = layui.form;
+
+        const postId = new URLSearchParams(location.search).get('postId');
+
+        function disableSave() {
+            $('#btnSave').prop('disabled', true).css('opacity', .5);
+        }
+
+        if (!postId) {
+            disableSave();
+            layer.msg('缺少岗位ID');
+        }
+
+        if (postId) {
+            $.ajax({
+                url: server_url + '/system/post/getPostDetail',
+                method: 'POST',
+                headers: {
+                    Authorization: token
+                },
+                data: {
+                    postId: postId
+                },
+                dataType: 'json',
+                success: function (resp) {
+                    if (resp.code !== 0) {
+                        disableSave();
+                        layer.msg(resp.msg);
+                        return;
+                    }
+                    const data = resp.data;
+                    form.val('postForm', {
+                        postId: String(data.postId),
+                        postName: data.postName || '',
+                        postCode: data.postCode || '',
+                        status: String(data.status == null ? 1 : data.status),
+                        remark: data.remark || ''
+                    });
+                    form.render('radio');
+                },
+                error: function () {
+                    disableSave();
+                    layer.msg('岗位详情加载失败，请稍后重试');
+                }
+            });
+        }
+
+        function closeSelf() {
+            if (parent && parent.layer && parent.layer.getFrameIndex) {
+                const index = parent.layer.getFrameIndex(window.name);
+                parent.layer.close(index);
+                return;
+            }
+            layer.closeAll();
+        }
+
+        $('#btnCancel').on('click', closeSelf);
+
+        form.on('submit(save)', function (data) {
+            if (!postId) {
+                layer.msg('缺少岗位ID');
+                return false;
+            }
+            const field = data.field;
+            const index = layer.load(0);
+            $.ajax({
+                url: server_url + '/system/post/updatePost',
+                method: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    Authorization: token
+                },
+                data: JSON.stringify({
+                    postId: postId,
+                    postName: $.trim(field.postName),
+                    postCode: $.trim(field.postCode),
+                    status: Number(field.status),
+                    remark: $.trim(field.remark || '') || null
+                }),
+                dataType: 'json',
+                success: function (resp) {
+                    layer.close(index);
+                    if (resp.code === 0) {
+                        if (parent && parent.layer && parent.layer.msg) {
+                            parent.layer.msg('更新成功');
+                        } else {
+                            layer.msg('更新成功');
+                        }
+                        closeSelf();
+                    } else {
+                        layer.msg(resp.msg);
+                    }
+                },
+                error: function () {
+                    layer.close(index);
+                    layer.msg('请求失败，请稍后重试');
+                }
+            });
+            return false;
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <title>密钥管理</title>
+    <style>
+        .key-view-textarea {
+            min-height: 90px;
+            word-break: break-all;
+            background: #f8f9fb;
+        }
+        .key-copy-btn {
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="yaya-panel">
+        <form class="layui-form" style="padding: 10px 0" onsubmit="return false;">
+            <div class="layui-row">
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">密钥类别</label>
+                    <div class="yaya-input-block">
+                        <select id="keyCategory">
+                            <option value="">全部</option>
+                            <option value="1">对称密钥</option>
+                            <option value="2">非对称密钥</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">算法</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="algorithm" placeholder="例如 AES-128" autocomplete="off" class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">应用ID</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="appId" placeholder="请输入应用ID" autocomplete="off" class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">状态</label>
+                    <div class="yaya-input-block">
+                        <select id="status">
+                            <option value="">全部</option>
+                            <option value="1">正常</option>
+                            <option value="0">停用</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="layui-row">
+                <div class="layui-col-md4 layui-col-sm4 yaya-form-item">
+                    <label class="yaya-form-label">创建时间</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="createTimeRange" placeholder="开始时间 - 结束时间" autocomplete="off" readonly class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <button type="button" id="btnSearch" data-perm="secretKey:search" class="yaya-btn yaya-primary">搜索</button>
+                    <button type="button" id="btnReset" class="yaya-btn" style="margin-left: 10px;">重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="yaya-panel" style="margin-top: 10px;">
+        <div style="display: flex;flex-direction: row;justify-content: flex-end;padding: 10px;">
+            <button id="btnAdd" data-perm="secretKey:add" type="button" class="yaya-btn yaya-primary">新增密钥</button>
+        </div>
+        <table class="layui-hide" id="table-key" lay-filter="table-key"></table>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const table = layui.table;
+        const layer = layui.layer;
+        const form = layui.form;
+        const laydate = layui.laydate;
+
+        const TABLE_ID = 'table-key';
+        const BASE_URL = server_url + '/system/secretKey';
+        // 日期控件主题色跟随模板主色
+        const themeColor = getComputedStyle(document.documentElement).getPropertyValue('--yaya-primary').trim() || '#409eff';
+
+        laydate.render({
+            elem: '#createTimeRange',
+            type: 'datetime',
+            range: true,
+            theme: themeColor
+        });
+
+        function escapeHtml(text) {
+            return String(text == null ? '' : text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function buildWhere() {
+            const where = {};
+            const keyCategory = $('#keyCategory').val();
+            if (keyCategory !== '') {
+                where.keyCategory = Number(keyCategory);
+            }
+            const algorithm = $.trim($('#algorithm').val());
+            if (algorithm) {
+                where.algorithm = algorithm;
+            }
+            const appId = $.trim($('#appId').val());
+            if (appId) {
+                where.appId = appId;
+            }
+            const status = $('#status').val();
+            if (status !== '') {
+                where.status = Number(status);
+            }
+            const range = $.trim($('#createTimeRange').val());
+            if (range) {
+                const parts = range.split(' - ');
+                if (parts.length === 2) {
+                    where.startTime = parts[0];
+                    where.endTime = parts[1];
+                }
+            }
+            return where;
+        }
+
+        function reloadTable() {
+            table.reload(TABLE_ID, {
+                where: buildWhere(),
+                page: {
+                    curr: 1,
+                    prev: '上一页',
+                    next: '下一页',
+                    theme: '#409eff'
+                }
+            });
+        }
+
+        function copyText(text) {
+            if (!text) {
+                layer.msg('没有可复制的内容');
+                return;
+            }
+            const done = function () {
+                layer.msg('已复制');
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(done, function () {
+                    layer.msg('复制失败，请手动复制');
+                });
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                done();
+            }
+        }
+
+        table.render({
+            elem: '#table-key',
+            id: TABLE_ID,
+            url: BASE_URL + '/getSecretKeyPage',
+            method: 'post',
+            headers: {
+                Authorization: token
+            },
+            contentType: 'application/json',
+            request: {
+                pageName: 'pageNum',
+                limitName: 'pageSize'
+            },
+            where: buildWhere(),
+            parseData: function (res) {
+                return {
+                    code: res.code,
+                    msg: res.msg,
+                    count: (res.data && res.data.total) || 0,
+                    data: (res.data && res.data.records) || []
+                };
+            },
+            skin: 'line',
+            page: {
+                prev: '上一页',
+                next: '下一页',
+                theme: '#409eff'
+            },
+            limit: 10,
+            limits: [10, 20, 50],
+            defaultToolbar: [],
+            cols: [[
+                {
+                    title: '类别',
+                    width: 110,
+                    templet: function (row) {
+                        if (Number(row.keyCategory) === 1) {
+                            return '<span class="yaya-tag yaya-tag-light-primary tag-small">对称密钥</span>';
+                        }
+                        return '<span class="yaya-tag yaya-tag-light-warning tag-small">非对称密钥</span>';
+                    }
+                },
+                {field: 'algorithm', title: '算法', width: 100},
+                {
+                    field: 'appId',
+                    title: '应用ID',
+                    minWidth: 150,
+                    templet: function (row) {
+                        return escapeHtml(row.appId) || '-';
+                    }
+                },
+                {
+                    title: '密钥内容',
+                    minWidth: 240,
+                    templet: function (row) {
+                        if (Number(row.keyCategory) === 1) {
+                            return '<span title="点击「查看」可复制">' + escapeHtml(row.secretValue) + '</span>';
+                        }
+                        const publicKey = String(row.publicKey || '');
+                        return '<span title="点击「查看」查看完整公钥/私钥">' + escapeHtml(publicKey.substring(0, 20)) + '…</span>';
+                    }
+                },
+                {
+                    title: '状态',
+                    width: 80,
+                    align: 'center',
+                    templet: function (row) {
+                        if (Number(row.status) === 1) {
+                            return '<span class="yaya-tag yaya-tag-plain-success is-round tag-small">正常</span>';
+                        }
+                        return '<span class="yaya-tag yaya-tag-plain-danger is-round tag-small">停用</span>';
+                    }
+                },
+                {
+                    field: 'remark',
+                    title: '备注',
+                    minWidth: 140,
+                    templet: function (row) {
+                        return escapeHtml(row.remark) || '-';
+                    }
+                },
+                {
+                    field: 'createByName',
+                    title: '创建人',
+                    width: 110,
+                    templet: function (row) {
+                        return escapeHtml(row.createByName) || '-';
+                    }
+                },
+                {field: 'createTime', title: '创建时间', width: 170},
+                {
+                    title: '操作',
+                    fixed: 'right',
+                    width: 290,
+                    templet: function (row) {
+                        const enabled = Number(row.status) === 1;
+                        return window.yaya_permission_actions([
+                            {text: '查看', event: 'view', perm: 'secretKey:search'},
+                            {text: '编辑', event: 'edit', perm: 'secretKey:update'},
+                            {
+                                text: enabled ? '停用' : '启用',
+                                event: 'status',
+                                perm: enabled ? 'secretKey:disable' : 'secretKey:enable',
+                                className: 'yaya-btn is-link-success yaya-btn-small'
+                            },
+                            {
+                                text: '删除', event: 'delete', perm: 'secretKey:del',
+                                className: 'yaya-btn is-link-danger yaya-btn-small'
+                            }
+                        ]);
+                    }
+                }
+            ]]
+        });
+
+        function openAddForm() {
+            layer.open({
+                type: 2,
+                title: '新增密钥',
+                area: ['640px', '80%'],
+                shadeClose: true,
+                content: 'key-manager-add.html',
+                end: function () {
+                    reloadTable();
+                }
+            });
+        }
+
+        function openEditForm(keyId) {
+            layer.open({
+                type: 2,
+                title: '编辑密钥',
+                area: ['640px', '80%'],
+                shadeClose: true,
+                content: 'key-manager-edit.html?keyId=' + encodeURIComponent(keyId),
+                end: function () {
+                    reloadTable();
+                }
+            });
+        }
+
+        function openViewDialog(row) {
+            const index = layer.load(0);
+            $.ajax({
+                url: BASE_URL + '/getSecretKeyDetail',
+                method: 'POST',
+                headers: {
+                    Authorization: token
+                },
+                data: {
+                    keyId: row.keyId
+                },
+                dataType: 'json',
+                success: function (resp) {
+                    layer.close(index);
+                    if (resp.code !== 0) {
+                        layer.msg(resp.msg);
+                        return;
+                    }
+                    const data = resp.data;
+                    let html = '';
+                    if (Number(data.keyCategory) === 1) {
+                        html += '<div class="layui-form-item" style="margin-bottom: 0;">'
+                            + '<button type="button" class="yaya-btn yaya-btn-small key-copy-btn" data-target="#viewSecretValue">复制密钥</button>'
+                            + '<textarea readonly class="layui-textarea key-view-textarea" id="viewSecretValue">' + escapeHtml(data.secretValue) + '</textarea>'
+                            + '</div>';
+                    } else {
+                        html += '<div class="layui-form-item" style="margin-bottom: 0;">'
+                            + '<button type="button" class="yaya-btn yaya-btn-small key-copy-btn" data-target="#viewPublicKey">复制公钥</button>'
+                            + '<textarea readonly class="layui-textarea key-view-textarea" id="viewPublicKey">' + escapeHtml(data.publicKey) + '</textarea>'
+                            + '</div>';
+                        html += '<div class="layui-form-item" style="margin-bottom: 0;margin-top: 10px;">'
+                            + '<button type="button" class="yaya-btn yaya-btn-small key-copy-btn" data-target="#viewPrivateKey">复制私钥</button>'
+                            + '<textarea readonly class="layui-textarea key-view-textarea" id="viewPrivateKey">' + escapeHtml(data.privateKey) + '</textarea>'
+                            + '</div>';
+                    }
+                    const viewIndex = layer.open({
+                        type: 1,
+                        title: '密钥内容 - ' + (data.algorithm || ''),
+                        area: ['720px', '80%'],
+                        shadeClose: true,
+                        content: '<div style="padding: 16px;">' + html + '</div>'
+                    });
+                    $('#layui-layer' + viewIndex).on('click', '.key-copy-btn', function () {
+                        copyText($($(this).data('target')).val());
+                    });
+                },
+                error: function () {
+                    layer.close(index);
+                    layer.msg('请求失败，请稍后重试');
+                }
+            });
+        }
+
+        function toggleStatus(row) {
+            const targetStatus = Number(row.status) === 1 ? 0 : 1;
+            const actionText = targetStatus === 1 ? '启用' : '停用';
+            layer.confirm('确定' + actionText + '密钥「' + escapeHtml(row.algorithm) + '」吗？', {
+                title: '提示'
+            }, function (index) {
+                layer.close(index);
+                $.ajax({
+                    url: BASE_URL + '/updateSecretKeyStatus',
+                    method: 'POST',
+                    headers: {
+                        Authorization: token
+                    },
+                    data: {
+                        keyId: row.keyId,
+                        status: targetStatus
+                    },
+                    dataType: 'json',
+                    success: function (resp) {
+                        layer.msg(resp.msg);
+                        if (resp.code === 0) {
+                            reloadTable();
+                        }
+                    },
+                    error: function () {
+                        layer.msg('请求失败，请稍后重试');
+                    }
+                });
+            });
+        }
+
+        function deleteKey(row) {
+            layer.confirm('确定删除密钥「' + escapeHtml(row.algorithm) + '」吗？', {
+                title: '提示'
+            }, function (index) {
+                layer.close(index);
+                $.ajax({
+                    url: BASE_URL + '/deleteSecretKey',
+                    method: 'POST',
+                    headers: {
+                        Authorization: token
+                    },
+                    data: {
+                        keyId: row.keyId
+                    },
+                    dataType: 'json',
+                    success: function (resp) {
+                        layer.msg(resp.msg);
+                        if (resp.code === 0) {
+                            reloadTable();
+                        }
+                    },
+                    error: function () {
+                        layer.msg('请求失败，请稍后重试');
+                    }
+                });
+            });
+        }
+
+        $('#btnSearch').on('click', reloadTable);
+        $('#btnReset').on('click', function () {
+            $('#keyCategory').val('');
+            $('#algorithm').val('');
+            $('#appId').val('');
+            $('#status').val('');
+            $('#createTimeRange').val('');
+            form.render('select');
+            reloadTable();
+        });
+        $('#btnAdd').on('click', openAddForm);
+
+        table.on('tool(' + TABLE_ID + ')', function (obj) {
+            if (obj.event === 'view') {
+                openViewDialog(obj.data);
+            } else if (obj.event === 'edit') {
+                openEditForm(obj.data.keyId);
+            } else if (obj.event === 'status') {
+                toggleStatus(obj.data);
+            } else if (obj.event === 'delete') {
+                deleteKey(obj.data);
+            }
+        });
+
+    });
+</script>
+</body>
+</html>

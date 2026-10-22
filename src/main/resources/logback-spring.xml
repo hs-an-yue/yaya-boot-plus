@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false">
+    <!--
+        日志路径优先级: 环境变量/启动参数 LOG_PATH > yaya.log-path > ./log
+        必须提供兜底路径, 否则 Logback 会把未解析的 ${LOG_PATH} 写成 LOG_PATH_IS_UNDEFINED 目录
+        注意: 日志配置变更后需要重启应用; 不开启 scan 可避免重新扫描时 Spring 属性丢失
+    -->
+    <springProperty scope="context" name="YAYA_LOG_PATH" source="yaya.log-path" defaultValue="./log"/>
+    <property name="LOG_PATH" value="${LOG_PATH:-${YAYA_LOG_PATH:-./log}}"/>
+    <springProperty scope="context" name="YAYA_LOG_RETENTION_DAYS" source="yaya.log-retention-days" defaultValue="30"/>
+    <property name="LOG_RETENTION_DAYS" value="${YAYA_LOG_RETENTION_DAYS:-30}"/>
+    <!-- 归档日志总大小上限, 超过后从最旧归档开始删除 -->
+    <springProperty scope="context" name="YAYA_LOG_TOTAL_SIZE_CAP" source="yaya.log-total-size-cap" defaultValue="2GB"/>
+    <property name="LOG_TOTAL_SIZE_CAP" value="${YAYA_LOG_TOTAL_SIZE_CAP:-2GB}"/>
+
+    <!-- 控制台输出配置 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}-[%X{trackId}]- %msg%n</pattern>
+        </encoder>
+    </appender>
+    <!-- 文件输出配置 -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 时时日志的名称 -->
+        <file>${LOG_PATH}/yaya-boot-plus.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- 最终生成日志文件的名称,以天作为基本单元 -->
+            <fileNamePattern>${LOG_PATH}/yaya-boot-plus.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- 历史记录存储天数 -->
+            <maxHistory>${LOG_RETENTION_DAYS}</maxHistory>
+            <!-- 归档日志总大小上限 -->
+            <totalSizeCap>${LOG_TOTAL_SIZE_CAP}</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}-[%X{trackId}]- %msg%n</pattern>
+        </encoder>
+    </appender>
+    <!-- 文件输出配置 -->
+    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 时时日志的名称 -->
+        <file>${LOG_PATH}/yaya-boot-plus-error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- 最终生成日志文件的名称,以天作为基本单元 -->
+            <fileNamePattern>${LOG_PATH}/yaya-boot-plus-error.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- 历史记录存储天数 -->
+            <maxHistory>${LOG_RETENTION_DAYS}</maxHistory>
+            <!-- 归档日志总大小上限 -->
+            <totalSizeCap>${LOG_TOTAL_SIZE_CAP}</totalSizeCap>
+        </rollingPolicy>
+        <!-- 只记录ERROR -->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}-[%X{trackId}]- %msg%n</pattern>
+        </encoder>
+    </appender>
+    <!-- 日志级别 -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="ERROR_FILE"/>
+    </root>
+</configuration>

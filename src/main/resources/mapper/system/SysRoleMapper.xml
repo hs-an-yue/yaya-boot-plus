@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yaya.system.mapper.SysRoleMapper">
+
+    <!--
+        自定义 SQL 统一写在本文件(接口中不允许写注解 SQL)
+        继承 BaseMapper 提供的通用方法无需在此声明
+    -->
+
+    <sql id="roleVoColumns">
+        r.role_id,
+        r.role_name,
+        r.role_code,
+        r.dept_id,
+        d.dept_name,
+        r.data_scope,
+        r.status,
+        r.remark,
+        r.create_by,
+        u.nickname AS create_by_name,
+        r.create_time,
+        r.update_time
+    </sql>
+
+    <select id="getRolePage" resultType="com.yaya.system.domain.vo.SysRoleVo">
+        SELECT
+        <include refid="roleVoColumns"/>
+        FROM sys_role r
+        LEFT JOIN sys_dept d ON d.dept_id = r.dept_id
+        LEFT JOIN sys_user u ON u.user_id = r.create_by
+        <where>
+            r.is_deleted = 0
+            <if test="roleName != null and roleName != ''">
+                AND r.role_name LIKE CONCAT('%', #{roleName}, '%')
+            </if>
+            <if test="roleCode != null and roleCode != ''">
+                AND r.role_code LIKE CONCAT('%', #{roleCode}, '%')
+            </if>
+            <if test="status != null">
+                AND r.status = #{status}
+            </if>
+        </where>
+        ORDER BY r.create_time DESC, r.role_id DESC
+    </select>
+
+    <select id="getRoleDetail" resultType="com.yaya.system.domain.vo.SysRoleVo">
+        SELECT
+        <include refid="roleVoColumns"/>
+        FROM sys_role r
+        LEFT JOIN sys_dept d ON d.dept_id = r.dept_id
+        LEFT JOIN sys_user u ON u.user_id = r.create_by
+        WHERE r.role_id = #{roleId}
+          AND r.is_deleted = 0
+    </select>
+
+    <select id="countByRoleCode" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_role
+        WHERE role_code = #{roleCode}
+        <if test="excludeRoleId != null">
+            AND role_id != #{excludeRoleId}
+        </if>
+    </select>
+
+    <select id="countUsersByRole" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_user_role ur
+        INNER JOIN sys_user u ON u.user_id = ur.user_id AND u.is_deleted = 0
+        WHERE ur.role_id = #{roleId}
+    </select>
+
+    <update id="logicDeleteById">
+        UPDATE sys_role
+        SET is_deleted = 1,
+            update_by = #{updateBy},
+            update_time = #{updateTime}
+        WHERE role_id = #{roleId}
+          AND is_deleted = 0
+    </update>
+
+</mapper>

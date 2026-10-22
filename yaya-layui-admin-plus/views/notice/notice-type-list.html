@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <title>公告类型管理</title>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="yaya-panel">
+        <form class="layui-form" style="padding: 10px 0" onsubmit="return false;">
+            <div class="layui-row">
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">类型名称</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="typeName" placeholder="请输入类型名称" autocomplete="off" class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">状态</label>
+                    <div class="yaya-input-block">
+                        <select id="status">
+                            <option value="">全部</option>
+                            <option value="1">正常</option>
+                            <option value="0">停用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <button type="button" id="btnSearch" data-perm="noticeType:search" class="yaya-btn yaya-primary">搜索</button>
+                    <button type="button" id="btnReset" class="yaya-btn" style="margin-left: 10px;">重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="yaya-panel" style="margin-top: 10px;">
+        <div style="display: flex;flex-direction: row;justify-content: flex-end;padding: 10px;">
+            <button id="btnAdd" data-perm="noticeType:add" type="button" class="yaya-btn yaya-primary">新增类型</button>
+        </div>
+        <table class="layui-hide" id="table-notice-type" lay-filter="table-notice-type"></table>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const table = layui.table;
+        const layer = layui.layer;
+        const form = layui.form;
+
+        const TABLE_ID = 'table-notice-type';
+        const BASE_URL = server_url + '/system/noticeType';
+
+        function buildWhere() {
+            const where = {};
+            const noticeTypeName = $.trim($('#typeName').val());
+            if (noticeTypeName) {
+                where.noticeTypeName = noticeTypeName;
+            }
+            const status = $('#status').val();
+            if (status !== '') {
+                where.status = Number(status);
+            }
+            return where;
+        }
+
+        function reloadTable() {
+            table.reload(TABLE_ID, {
+                where: buildWhere(),
+                page: {
+                    curr: 1,
+                    prev:'上一页',
+                    next:'下一页',
+                    theme:'#409eff'
+                }
+            });
+        }
+
+        function escapeHtml(text) {
+            return String(text == null ? '' : text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        table.render({
+            elem: '#table-notice-type',
+            id: TABLE_ID,
+            url: BASE_URL + '/getNoticeTypePage',
+            method: 'post',
+            headers: {
+                Authorization: token
+            },
+            contentType: 'application/json',
+            request: {
+                pageName: 'pageNum',
+                limitName: 'pageSize'
+            },
+            where: buildWhere(),
+            parseData: function (res) {
+                return {
+                    code: res.code,
+                    msg: res.msg,
+                    count: (res.data && res.data.total) || 0,
+                    data: (res.data && res.data.records) || []
+                };
+            },
+            skin: 'line',
+            page: {
+                prev:'上一页',
+                next:'下一页',
+                theme:'#409eff'
+            },
+            limit: 10,
+            limits: [10, 20, 50],
+            defaultToolbar: [],
+            cols: [[
+                {field: 'noticeTypeId', title: '类型ID', width: 200},
+                {field: 'noticeTypeName', title: '类型名称', minWidth: 200},
+                {
+                    title: '状态',
+                    width: 80,
+                    align: 'center',
+                    templet: function (row) {
+                        if (Number(row.status) === 1) {
+                            return '<span class="yaya-tag yaya-tag-plain-success is-round tag-small">正常</span>';
+                        }
+                        return '<span class="yaya-tag yaya-tag-plain-danger is-round tag-small">停用</span>';
+                    }
+                },
+                {
+                    field: 'createByName',
+                    title: '创建人',
+                    width: 120,
+                    templet: function (row) {
+                        return escapeHtml(row.createByName) || '-';
+                    }
+                },
+                {field: 'createTime', title: '创建时间', width: 180},
+                {field: 'updateTime', title: '更新时间', width: 180},
+                {
+                    title: '操作',
+                    width: 220,
+                    templet: function (row) {
+                        const enabled = Number(row.status) === 1;
+                        return window.yaya_permission_actions([
+                            {text: '编辑', event: 'edit', perm: 'noticeType:update'},
+                            {
+                                text: enabled ? '停用' : '启用',
+                                event: 'status',
+                                perm: enabled ? 'noticeType:disable' : 'noticeType:enable',
+                                className: 'yaya-btn is-link-success yaya-btn-small'
+                            },
+                            {
+                                text: '删除', event: 'delete', perm: 'noticeType:del',
+                                className: 'yaya-btn is-link-danger yaya-btn-small'
+                            }
+                        ]);
+                    }
+                }
+            ]]
+        });
+
+        function openNoticeTypeForm(noticeTypeId) {
+            let content = 'notice-type-add.html';
+            if (noticeTypeId) {
+                content = 'notice-type-edit.html?noticeTypeId=' + encodeURIComponent(noticeTypeId);
+            }
+            layer.open({
+                type: 2,
+                title: noticeTypeId ? '编辑公告类型' : '新增公告类型',
+                area: ['640px', '80%'],
+                shadeClose: true,
+                content: content,
+                end: function () {
+                    reloadTable();
+                }
+            });
+        }
+
+        $('#btnSearch').on('click', reloadTable);
+        $('#btnReset').on('click', function () {
+            $('#typeName').val('');
+            $('#status').val('');
+            form.render('select');
+            reloadTable();
+        });
+        $('#btnAdd').on('click', function () {
+            openNoticeTypeForm();
+        });
+
+        table.on('tool(' + TABLE_ID + ')', function (obj) {
+            if (obj.event === 'edit') {
+                openNoticeTypeForm(obj.data.noticeTypeId);
+            } else if (obj.event === 'status') {
+                const targetStatus = Number(obj.data.status) === 1 ? 0 : 1;
+                const actionText = targetStatus === 1 ? '启用' : '停用';
+                layer.confirm('确定' + actionText + '类型「' + escapeHtml(obj.data.noticeTypeName) + '」吗？', {
+                    title: '提示'
+                }, function (index) {
+                    layer.close(index);
+                    $.ajax({
+                        url: BASE_URL + '/updateNoticeTypeStatus',
+                        method: 'POST',
+                        headers: {
+                            Authorization: token
+                        },
+                        data: {
+                            noticeTypeId: obj.data.noticeTypeId,
+                            status: targetStatus
+                        },
+                        dataType: 'json',
+                        success: function (resp) {
+                            layer.msg(resp.msg);
+                            if (resp.code === 0) {
+                                reloadTable();
+                            }
+                        },
+                        error: function () {
+                            layer.msg('请求失败，请稍后重试');
+                        }
+                    });
+                });
+            } else if (obj.event === 'delete') {
+                layer.confirm('确定删除类型「' + escapeHtml(obj.data.noticeTypeName) + '」吗？', {
+                    title: '提示'
+                }, function (index) {
+                    layer.close(index);
+                    $.ajax({
+                        url: BASE_URL + '/deleteNoticeType',
+                        method: 'POST',
+                        headers: {
+                            Authorization: token
+                        },
+                        data: {
+                            noticeTypeId: obj.data.noticeTypeId
+                        },
+                        dataType: 'json',
+                        success: function (resp) {
+                            layer.msg(resp.msg);
+                            if (resp.code === 0) {
+                                reloadTable();
+                            }
+                        },
+                        error: function () {
+                            layer.msg('请求失败，请稍后重试');
+                        }
+                    });
+                });
+            }
+        });
+
+    });
+</script>
+</body>
+</html>

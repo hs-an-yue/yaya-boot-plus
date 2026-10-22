@@ -1,0 +1,836 @@
+/* yaya-layui-admin-plus css样式扩展 2026/02/25 10:05:59;author:夜泊1990;email:hd1611756908@163.com;Licensed:MIT */
+/*
+ * 按钮扩展
+ */
+.yaya-btn{
+    padding: 8px 15px;
+    font-size: 14px;
+    border-radius: var(--yaya-radius-md);
+    display: inline-flex;/* 弹性布局:配合下方justify/align实现内容水平+垂直居中 */
+    justify-content: center;
+    align-items: center;
+    line-height: 1;
+    height: 32px;
+    white-space: nowrap;
+    cursor: pointer;
+    color: var(--yaya-text-2);
+    text-align: center;
+    box-sizing: border-box;
+    outline: none;
+    transition: .1s;
+    font-weight: 500;
+    user-select: none;
+    vertical-align: middle;
+    background-color: white;
+    border: 1px solid var(--yaya-border);
+}
+/* 默认伪类样式 */
+.yaya-default:hover{
+    color: var(--yaya-primary);
+    border-color: var(--yaya-primary-border);
+    background-color: var(--yaya-primary-bg);
+    outline: none;
+}
+.yaya-primary{
+    color: white;
+    background-color: var(--yaya-primary);
+    border-color: var(--yaya-primary);
+    outline-color: var(--yaya-primary-border);
+}
+.yaya-primary:hover{
+    color: white;
+    background-color: var(--yaya-primary-hover);
+    border-color: var(--yaya-primary-hover);
+    outline: none;
+}
+.yaya-success{
+    color: white;
+    background-color: var(--yaya-success);
+    border-color: var(--yaya-success);
+    outline-color: var(--yaya-success-border);
+}
+.yaya-success:hover{
+    color: white;
+    background-color: var(--yaya-success-hover);
+    border-color: var(--yaya-success-hover);
+    outline: none;
+}
+
+.yaya-info{
+    color: white;
+    background-color: var(--yaya-info);
+    border-color: var(--yaya-info);
+    outline-color: var(--yaya-info-border);
+}
+.yaya-info:hover{
+    color: white;
+    background-color: var(--yaya-info-hover);
+    border-color: var(--yaya-info-hover);
+    outline: none;
+}
+.yaya-warning{
+    color: white;
+    background-color: var(--yaya-warning);
+    border-color: var(--yaya-warning);
+    outline-color: var(--yaya-warning-border);
+}
+.yaya-warning:hover{
+    color: white;
+    background-color: var(--yaya-warning-hover);
+    border-color: var(--yaya-warning-hover);
+    outline: none;
+}
+.yaya-danger{
+    color: white;
+    background-color: var(--yaya-danger);
+    border-color: var(--yaya-danger);
+    outline-color: var(--yaya-danger-border);
+}
+.yaya-danger:hover{
+    color: white;
+    background-color: var(--yaya-danger-hover);
+    border-color: var(--yaya-danger-hover);
+    outline: none;
+}
+.is-plain-primary{
+    color: var(--yaya-primary);
+    background-color: var(--yaya-primary-bg);
+    border-color: var(--yaya-primary-border);
+}
+.is-plain-primary:hover{
+    color: white;
+    background-color: var(--yaya-primary);
+}
+.is-plain-success{
+    color: var(--yaya-success);
+    background-color: var(--yaya-success-bg);
+    border-color: var(--yaya-success-border);
+}
+.is-plain-success:hover{
+    color: white;
+    background-color: var(--yaya-success);
+}
+.is-plain-info{
+    color: var(--yaya-info);
+    background-color: var(--yaya-info-bg);
+    border-color: var(--yaya-info-border);
+}
+.is-plain-info:hover{
+    color: white;
+    background-color: var(--yaya-info);
+}
+.is-plain-warning{
+    color: var(--yaya-warning);
+    background-color: var(--yaya-warning-bg);
+    border-color: var(--yaya-warning-border);
+}
+.is-plain-warning:hover{
+    color: white;
+    background-color: var(--yaya-warning);
+}
+.is-plain-danger{
+    color: var(--yaya-danger);
+    background-color: var(--yaya-danger-bg);
+    border-color: var(--yaya-danger-border);
+}
+.is-plain-danger:hover{
+    color: white;
+    background-color: var(--yaya-danger);
+}
+
+.is-round-default{
+    border-radius: 20px;
+}
+.is-round-default:hover{
+    color: var(--yaya-primary);
+    border-color: var(--yaya-primary-border);
+    background-color: var(--yaya-primary-bg);
+    outline: none;
+    border-radius: 20px;
+}
+.is-round-primary{
+    color: var(--yaya-primary);
+    background-color: var(--yaya-primary-bg);
+    border-color: var(--yaya-primary-border);
+    border-radius: 20px;
+}
+.is-round-primary:hover{
+    color: white;
+    background-color: var(--yaya-primary);
+    border-radius: 20px;
+}
+.is-round-success{
+    color: var(--yaya-success);
+    background-color: var(--yaya-success-bg);
+    border-color: var(--yaya-success-border);
+    border-radius: 20px;
+}
+.is-round-success:hover{
+    color: white;
+    background-color: var(--yaya-success);
+    border-radius: 20px;
+}
+.is-round-info{
+    color: var(--yaya-info);
+    background-color: var(--yaya-info-bg);
+    border-color: var(--yaya-info-border);
+    border-radius: 20px;
+}
+.is-round-info:hover{
+    color: white;
+    background-color: var(--yaya-info);
+    border-radius: 20px;
+}
+.is-round-warning{
+    color: var(--yaya-warning);
+    background-color: var(--yaya-warning-bg);
+    border-color: var(--yaya-warning-border);
+    border-radius: 20px;
+}
+.is-round-warning:hover{
+    color: white;
+    background-color: var(--yaya-warning);
+    border-radius: 20px;
+}
+.is-round-danger{
+    color: var(--yaya-danger);
+    background-color: var(--yaya-danger-bg);
+    border-color: var(--yaya-danger-border);
+    border-radius: 20px;
+}
+.is-round-danger:hover{
+    color: white;
+    background-color: var(--yaya-danger);
+    border-radius: 20px;
+}
+
+.is-circle-default{
+    padding: 8px;
+    border-radius:50%;
+    width: 32px;
+    height: 32px;
+
+}
+.is-circle-default:hover{
+    color: var(--yaya-primary);
+    border-color: var(--yaya-primary-border);
+    background-color: var(--yaya-primary-bg);
+    outline: none;
+    border-radius:50%;
+}
+
+.is-circle-info{
+    padding: 8px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    color: white;
+    background-color: var(--yaya-info);
+}
+.is-circle-info:hover{
+    color: #ffffff;
+    border-color: var(--yaya-info-hover);
+    background-color: var(--yaya-info-hover);
+    padding: 8px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+}
+
+.is-circle-success{
+    padding: 8px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    color: white;
+    background-color: var(--yaya-success);
+}
+.is-circle-success:hover{
+    color: #ffffff;
+    border-color: var(--yaya-success-border);
+    background-color: var(--yaya-success-border);
+    padding: 8px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+}
+
+.is-circle-primary{
+    padding: 8px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    color: white;
+    background-color: var(--yaya-primary);
+}
+.is-circle-primary:hover{
+    color: #ffffff;
+    border-color: var(--yaya-primary-border);
+    background-color: var(--yaya-primary-hover);
+    padding: 8px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+}
+
+.is-circle-warning{
+    padding: 8px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    color: white;
+    background-color: var(--yaya-warning);
+}
+.is-circle-warning:hover{
+    color: white;
+    border-color: var(--yaya-warning-hover);
+    background-color: var(--yaya-warning-hover);
+    padding: 8px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+}
+
+.is-circle-danger{
+    padding: 8px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    color: white;
+    background-color: var(--yaya-danger);
+}
+.is-circle-danger:hover{
+    color: white;
+    border-color: var(--yaya-danger-hover);
+    background-color: var(--yaya-danger-hover);
+    padding: 8px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+}
+/*链接按钮*/
+.is-link-default{
+    border-color: transparent;
+    color: var(--yaya-text-2);
+    background: transparent;
+    padding: 2px;
+    height: auto;
+}
+.is-link-default:hover{
+    color: var(--yaya-info);
+}
+.is-link-primary{
+    border-color: transparent;
+    color: var(--yaya-primary);
+    background: transparent;
+    padding: 2px;
+    height: auto;
+}
+.is-link-primary:hover{
+    color: var(--yaya-primary-border);
+}
+
+.is-link-success{
+    border-color: transparent;
+    color: var(--yaya-success);
+    background: transparent;
+    padding: 2px;
+    height: auto;
+}
+.is-link-success:hover{
+    color: var(--yaya-success-border);
+}
+
+.is-link-info{
+    border-color: transparent;
+    color: var(--yaya-info);
+    background: transparent;
+    padding: 2px;
+    height: auto;
+}
+.is-link-info:hover{
+    color: var(--yaya-info-hover);
+}
+
+.is-link-warning{
+    border-color: transparent;
+    color: var(--yaya-warning);
+    background: transparent;
+    padding: 2px;
+    height: auto;
+}
+.is-link-warning:hover{
+    color: var(--yaya-warning-hover);
+}
+
+.is-link-danger{
+    border-color: transparent;
+    color: var(--yaya-danger);
+    background: transparent;
+    padding: 2px;
+    height: auto;
+}
+.is-link-danger:hover{
+    color: var(--yaya-danger-hover);
+}
+
+/* 按钮禁用 */
+.yaya-btn-disabled,
+.yaya-btn-disabled:active,
+.yaya-btn-disabled:hover{
+    cursor:not-allowed!important;
+    opacity:0.4
+}
+/* laytpl 渲染的操作按钮组 */
+.yaya-permission-actions{
+    display:inline-flex;
+    align-items:center;
+    flex-wrap:nowrap;
+    white-space:nowrap;
+}
+.yaya-permission-actions > .yaya-btn{
+    margin-right:6px;
+}
+.yaya-permission-actions > .yaya-btn:last-child{
+    margin-right:0;
+}
+/* 按钮大小 */
+.yaya-btn-large{
+    height: 44px;
+    padding: 0 40px;
+    font-size: 24px;
+}
+.yaya-btn-small{
+    height: 24px;
+    padding: 0 11px;
+    font-size: 12px;
+}
+
+.yaya-btn-round-large{
+    height: 44px;
+    padding: 0 40px;
+    font-size: 24px;
+}
+.yaya-btn-round-small{
+    height: 24px;
+    padding: 0 15px;
+    font-size: 12px;
+}
+
+.yaya-btn-circle-large{
+    width: 56px;
+    height: 56px;
+    padding: 0;
+}
+.yaya-btn-circle-large>i{
+    font-size: 24px;
+}
+.yaya-btn-circle-small{
+    height: 24px;
+    width: 24px;
+    padding: 0;
+}
+.yaya-btn-circle-small>i{
+    font-size: 12px;
+}
+/*宽度100%*/
+.yaya-fluid{
+    width: 100%;
+    height: 40px;
+    padding: 0 15px;
+}
+/* 标签扩展 */
+.yaya-tag{
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    padding: 0 9px;
+    color: white;
+    height: 24px;
+    justify-content:center;
+    vertical-align: middle;
+    border-width: 1px;
+    border-style: solid;
+    border-radius: 4px;
+    box-sizing: border-box;
+    white-space: nowrap;
+}
+.yaya-tag-primary{
+    background-color: var(--yaya-primary);
+    border-color: var(--yaya-primary);
+}
+.yaya-tag-success{
+    background-color: var(--yaya-success);
+    border-color: var(--yaya-success);
+}
+.yaya-tag-info{
+    background-color: var(--yaya-info);
+    border-color: var(--yaya-info);
+}
+.yaya-tag-warning{
+    background-color: var(--yaya-warning);
+    border-color: var(--yaya-warning);
+}
+.yaya-tag-danger{
+    background-color: var(--yaya-danger);
+    border-color: var(--yaya-danger);
+}
+
+.yaya-tag-light-primary{
+    background-color: var(--yaya-primary-bg);
+    color: var(--yaya-primary);
+    border-color: var(--yaya-primary-border-light);
+}
+.yaya-tag-light-success{
+    background-color: var(--yaya-success-bg);
+    color: var(--yaya-success);
+    border-color: var(--yaya-success-border-light);
+}
+.yaya-tag-light-info{
+    background-color: var(--yaya-info-bg);
+    color: var(--yaya-info);
+    border-color: var(--yaya-info-border-light);
+}
+.yaya-tag-light-warning{
+    background-color: var(--yaya-warning-bg);
+    color: var(--yaya-warning);
+    border-color: var(--yaya-warning-border-light);
+}
+.yaya-tag-light-danger{
+    background-color: var(--yaya-danger-bg);
+    color: var(--yaya-danger);
+    border-color: var(--yaya-danger-border-light);
+}
+
+.yaya-tag-plain-primary{
+    background-color: #ffffff;
+    color: var(--yaya-primary);
+    border-color: var(--yaya-primary-border);
+}
+.yaya-tag-plain-success{
+    background-color: #ffffff;
+    color: var(--yaya-success);
+    border-color: var(--yaya-success-border);
+}
+.yaya-tag-plain-info{
+    background-color: #ffffff;
+    color: var(--yaya-info);
+    border-color: var(--yaya-info-border);
+}
+.yaya-tag-plain-warning{
+    background-color: #ffffff;
+    color: var(--yaya-warning);
+    border-color: var(--yaya-warning-border);
+}
+.yaya-tag-plain-danger{
+    background-color: #ffffff;
+    color: var(--yaya-danger);
+    border-color: var(--yaya-danger-border);
+}
+/* 圆形标签 */
+.is-round{
+    border-radius: 9999px;
+}
+/* 标签 移除标记 */
+.yaya-x>i{
+    margin-left: 3px;
+    cursor: pointer;
+}
+/* 标签尺寸 */
+.tag-large{
+    padding: 0 15px;
+    height: 32px;
+}
+.tag-small{
+    height: 20px;
+    font-size: 12px;
+}
+/* 徽章 */
+.badge {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 75%;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 10rem; /* 大圆角 */
+    background-color: var(--yaya-gray-300);
+    color: var(--yaya-text-1);
+}
+
+.badge-primary {
+    background-color: var(--yaya-primary);
+    color: white;
+}
+.badge-success {
+    background-color: var(--yaya-success);
+    color: white;
+}
+
+
+.notification-container {
+    position: relative; /* 父容器必须是相对定位 */
+    display: inline-block;
+    cursor: pointer;/*手势*/
+}
+
+.badge-dot {
+    position: absolute;
+    top: -9px;
+    right: -9px;
+    background-color: var(--yaya-danger);
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 8px;
+    font-weight: bold;
+    border: 2px solid white; /* 增加描边使其在复杂背景下更清晰 */
+}
+/* 小红点徽章 */
+.icon-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    background-color: #ddd;
+    border-radius: 8px;
+}
+
+.dot {
+    position: absolute;
+    top: 0;
+    right: 0;
+    /* 核心样式 */
+    width: 10px;
+    height: 10px;
+    background-color: var(--yaya-danger);
+    border-radius: 50%; /* 变成圆形 */
+    border: 2px solid #fff; /* 白色描边，增强在背景上的辨识度 */
+
+    /* 居中偏移修正：让红点中心对准父容器的顶点 */
+    transform: translate(50%, -50%);
+}
+.dot::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: var(--yaya-danger);
+    animation: pulse 1.5s infinite ease-in-out;
+    z-index: -1;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+    100% {
+        transform: scale(2.5);
+        opacity: 0;
+    }
+}
+/* ==================== 日志详情弹层 ==================== */
+.yaya-log-detail{
+    max-height: calc(80vh - 50px);
+    overflow-y: auto;
+    background: var(--yaya-card);
+    font-size: 14px;
+    color: var(--yaya-text-1);
+}
+.yaya-log-hero{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, var(--yaya-primary-bg) 0%, rgba(255,255,255,.65) 100%);
+    border-bottom: 1px solid var(--yaya-border);
+}
+.yaya-log-hero-main{
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+.yaya-log-hero-icon{
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    color: #fff;
+    font-size: 20px;
+    background: var(--yaya-success);
+    box-shadow: 0 6px 16px rgba(103,194,58,.24);
+}
+.yaya-log-hero-icon.is-fail{
+    background: var(--yaya-danger);
+    box-shadow: 0 6px 16px rgba(255,77,79,.24);
+}
+.yaya-log-hero-title{
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--yaya-text-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.yaya-log-hero-sub{
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--yaya-text-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.yaya-log-status{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    flex: none;
+}
+.yaya-log-status.is-success{
+    color: var(--yaya-success-active);
+    background: var(--yaya-success-bg);
+    border: 1px solid var(--yaya-success-border-light);
+}
+.yaya-log-status.is-fail{
+    color: var(--yaya-danger-active);
+    background: var(--yaya-danger-bg);
+    border: 1px solid var(--yaya-danger-border-light);
+}
+.yaya-log-dot{
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+.yaya-log-grid{
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 28px;
+    padding: 20px 24px;
+}
+.yaya-log-field{
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+.yaya-log-field.is-full{
+    grid-column: 1 / -1;
+}
+.yaya-log-label{
+    font-size: 12px;
+    color: var(--yaya-text-3);
+}
+.yaya-log-value{
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--yaya-text-1);
+    word-break: break-all;
+}
+.yaya-log-value.is-mono{
+    font-family: Consolas, Monaco, monospace;
+    font-size: 12.5px;
+}
+.yaya-log-value.is-muted{
+    color: var(--yaya-text-4);
+}
+.yaya-log-section{
+    margin: 0 24px 18px;
+    border: 1px solid var(--yaya-border);
+    border-radius: var(--yaya-radius-md);
+    overflow: hidden;
+    background: var(--yaya-card);
+}
+.yaya-log-section-head{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--yaya-gray-100);
+    border-bottom: 1px solid var(--yaya-border);
+}
+.yaya-log-section-title{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--yaya-text-2);
+}
+.yaya-log-section-title::before{
+    content: "";
+    width: 3px;
+    height: 13px;
+    border-radius: 2px;
+    background: var(--yaya-primary);
+}
+.yaya-log-section.is-error .yaya-log-section-title::before{
+    background: var(--yaya-danger);
+}
+.yaya-log-copy{
+    padding: 2px 6px;
+    border: 0;
+    border-radius: var(--yaya-radius-sm);
+    background: transparent;
+    color: var(--yaya-primary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background .15s;
+}
+.yaya-log-copy:hover{
+    background: var(--yaya-primary-bg);
+}
+.yaya-log-code{
+    margin: 0;
+    padding: 12px 14px;
+    max-height: 300px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: #f8fafc;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 12px;
+    line-height: 1.75;
+    color: var(--yaya-text-2);
+}
+.yaya-log-section.is-error .yaya-log-code{
+    background: #fff7f7;
+    color: #a83232;
+}
+.yaya-log-empty{
+    color: var(--yaya-text-4);
+}
+@media (max-width: 720px){
+    .yaya-log-grid{
+        grid-template-columns: 1fr;
+        padding: 16px 18px;
+    }
+    .yaya-log-hero{
+        padding: 16px 18px;
+    }
+    .yaya-log-section{
+        margin: 0 18px 16px;
+    }
+}

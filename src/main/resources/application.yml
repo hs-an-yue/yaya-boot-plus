@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: yaya-boot-plus
+    version: @project.version@
+  profiles:
+    # 激活的配置: dev(开发环境) + mysql(数据库类型)
+    # 切换数据库只需改为: dev,postgresql
+    # 也可在启动时覆盖: --spring.profiles.active=dev,postgresql
+    active: dev,dev-mysql
+  servlet:
+    multipart:
+      max-file-size: 128MB     # 文件上传单个文件约束
+      max-request-size: 256MB  # 文件上传总文件大小约束
+# MyBatis-Plus 配置
+mybatis-plus:
+  # Mapper XML 文件位置(对应 resources/mapper/<模块>/ 目录约定)
+  mapper-locations: classpath*:mapper/**/*.xml
+  # 实体包(支持**通配符), mybatis原生不支持，只有在mybatis-plus中有效
+  type-aliases-package: com.yaya.**.domain.entity
+  configuration:
+    # 自定义 SQL 的列名(snake_case)映射到 Java 属性(camelCase)
+    map-underscore-to-camel-case: true
+  global-config:
+    # 关闭 MP 启动 banner
+    banner: false
+    db-config:
+      # 主键策略: 雪花ID 由 Java 侧生成, 数据库无自增(MySQL/PostgreSQL 通用)
+      id-type: assign_id
+      # 逻辑删除
+      logic-delete-field: isDeleted # 实体字段名为 isDeleted，配置后查询不需要添加is_delete条件，SQL会自动拼接，如果你在加会冗余
+      logic-delete-value: 1         # 1-已删除(与表结构一致)
+      logic-not-delete-value: 0     # 0-未删除(与表结构一致)
+management:
+  server:
+    port: 8989 # 健康检查配置独立的访问端口号,和业务端口号分开
+  endpoints:
+    jmx:
+      exposure:
+        include: health #开启健康检查功能,开启存活探针和就绪探针,如果项目部署到K8S上,需要这两个探针信息,并且K8S探针端口号为容器内端口号(8989)
+# 完整健康检查: http://127.0.0.1:8989/actuator/health
+# 存活探针:    http://127.0.0.1:8989/actuator/health/liveness
+# 就绪探针:    http://127.0.0.1:8989/actuator/health/readiness

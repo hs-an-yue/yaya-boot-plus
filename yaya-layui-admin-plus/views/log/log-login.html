@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <title>登录日志</title>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="yaya-panel">
+        <form class="layui-form" style="padding: 10px 0" onsubmit="return false;">
+            <div class="layui-row">
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">账号</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="username" placeholder="用户账号" autocomplete="off" class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">IP</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="ip" placeholder="登录IP" autocomplete="off" class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md2 layui-col-sm2 yaya-form-item">
+                    <label class="yaya-form-label">状态</label>
+                    <div class="yaya-input-block">
+                        <select id="status">
+                            <option value="">全部</option>
+                            <option value="1">成功</option>
+                            <option value="0">失败</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-col-md4 layui-col-sm4 yaya-form-item">
+                    <label class="yaya-form-label">登录时间</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="timeRange" placeholder="开始时间 - 结束时间" autocomplete="off" readonly class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+            </div>
+            <div class="layui-row">
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <button type="button" id="btnSearch" data-perm="loginLog:search" class="yaya-btn yaya-primary">搜索</button>
+                    <button type="button" id="btnReset" class="yaya-btn" style="margin-left: 10px;">重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="yaya-panel" style="margin-top: 10px;">
+        <table class="layui-hide" id="table-login-log" lay-filter="table-login-log"></table>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const table = layui.table;
+        const layer = layui.layer;
+        const form = layui.form;
+        const laydate = layui.laydate;
+
+        const TABLE_ID = 'table-login-log';
+
+        laydate.render({
+            elem: '#timeRange',
+            type: 'datetime',
+            range: true,
+            theme: getComputedStyle(document.documentElement).getPropertyValue('--yaya-primary').trim() || '#409eff'
+        });
+
+        function buildWhere() {
+            const where = {logType: 1};
+            const username = $.trim($('#username').val());
+            const ip = $.trim($('#ip').val());
+            const status = $('#status').val();
+            if (username) {
+                where.username = username;
+            }
+            if (ip) {
+                where.ip = ip;
+            }
+            if (status !== '') {
+                where.status = Number(status);
+            }
+            const range = $.trim($('#timeRange').val());
+            if (range) {
+                const parts = range.split(' - ');
+                if (parts.length === 2) {
+                    where.startTime = parts[0];
+                    where.endTime = parts[1];
+                }
+            }
+            return where;
+        }
+
+        function reloadTable() {
+            table.reload(TABLE_ID, {
+                where: buildWhere(),
+                page: {
+                    curr: 1,
+                    prev: '上一页',
+                    next: '下一页',
+                    theme: '#409eff'
+                }
+            });
+        }
+
+        table.render({
+            elem: '#table-login-log',
+            id: TABLE_ID,
+            url: server_url + '/system/sysLog/getSysLogPage',
+            method: 'post',
+            headers: {
+                Authorization: token
+            },
+            contentType: 'application/json',
+            request: {
+                pageName: 'pageNum',
+                limitName: 'pageSize'
+            },
+            where: buildWhere(),
+            parseData: function (res) {
+                return {
+                    code: res.code,
+                    msg: res.msg,
+                    count: (res.data && res.data.total) || 0,
+                    data: (res.data && res.data.records) || []
+                };
+            },
+            skin: 'line',
+            page: {
+                prev: '上一页',
+                next: '下一页',
+                theme: '#409eff'
+            },
+            limit: 10,
+            limits: [10, 20, 50, 100],
+            defaultToolbar: [],
+            cols: [[
+                {field: 'logId', title: '日志ID', fixed: 'left', width: 190},
+                {field: 'username', title: '账号', width: 140},
+                {field: 'operName', title: '操作人', width: 140},
+                {field: 'ip', title: 'IP', width: 140},
+                {field: 'address', title: '登录地点', minWidth: 160},
+                {field: 'browser', title: '浏览器', minWidth: 160},
+                {
+                    title: '状态',
+                    width: 80,
+                    align: 'center',
+                    templet: function (row) {
+                        if (Number(row.status) === 1) {
+                            return '<span class="yaya-tag yaya-tag-plain-success is-round tag-small">成功</span>';
+                        }
+                        return '<span class="yaya-tag yaya-tag-plain-danger is-round tag-small">失败</span>';
+                    }
+                },
+                {field: 'operTime', title: '登录时间', width: 180},
+                {
+                    title: '操作',
+                    fixed: 'right',
+                    width: 90,
+                    templet: function () {
+                        return window.yaya_permission_actions([
+                            {text: '详情', event: 'detail', perm: 'loginLog:search'}
+                        ]);
+                    }
+                }
+            ]]
+        });
+
+        function openDetail(row) {
+            layer.open({
+                type: 2,
+                title: '登录日志详情',
+                area: ['820px', '80%'],
+                shadeClose: true,
+                content: 'log-login-detail.html?logId=' + encodeURIComponent(row.logId)
+            });
+        }
+
+        $('#btnSearch').on('click', reloadTable);
+        $('#btnReset').on('click', function () {
+            $('#username').val('');
+            $('#ip').val('');
+            $('#status').val('');
+            $('#timeRange').val('');
+            form.render('select');
+            reloadTable();
+        });
+
+        table.on('tool(' + TABLE_ID + ')', function (obj) {
+            if (obj.event === 'detail') {
+                openDetail(obj.data);
+            }
+        });
+    });
+</script>
+</body>
+</html>

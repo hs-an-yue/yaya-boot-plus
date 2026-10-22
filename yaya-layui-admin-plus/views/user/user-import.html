@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <title>用户导入</title>
+    <style>
+        html, body {
+            height: 100%;
+        }
+
+        html {
+            background: #fafbfc;
+        }
+
+        body {
+            overflow-y: auto;
+            background: #fafbfc;
+            background-color: #fafbfc !important;
+        }
+
+        .yaya-box-fluid {
+            padding-bottom: 24px;
+        }
+
+        .import-layout {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            gap: 16px;
+            align-items: start;
+        }
+
+        .import-card {
+            padding: 20px;
+            background: var(--yaya-card);
+            border: 1px solid var(--yaya-card-border);
+            border-radius: var(--yaya-radius-lg);
+            box-shadow: var(--yaya-shadow);
+        }
+
+        .import-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--yaya-text-1);
+        }
+
+        .import-step-num {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #fff;
+            background: var(--yaya-primary);
+        }
+
+        .import-desc {
+            margin-bottom: 16px;
+            font-size: 13px;
+            line-height: 21px;
+            color: var(--yaya-text-3);
+        }
+
+        .import-template-btn {
+            width: 100%;
+            height: 38px;
+        }
+
+        .import-template-name {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--yaya-text-4);
+        }
+
+        .import-divider {
+            height: 1px;
+            margin: 20px 0;
+            background: var(--yaya-border);
+        }
+
+        .import-rules {
+            margin: 0;
+            padding-left: 18px;
+            font-size: 12px;
+            line-height: 22px;
+            color: var(--yaya-text-3);
+        }
+
+        .import-rules li::marker {
+            color: var(--yaya-primary);
+        }
+
+        .import-rules b {
+            color: var(--yaya-text-2);
+            font-weight: 600;
+        }
+
+        .import-columns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 12px;
+        }
+
+        .import-columns span {
+            padding: 3px 8px;
+            font-size: 11px;
+            color: var(--yaya-text-3);
+            background: var(--yaya-gray-200);
+            border-radius: 10px;
+        }
+
+        .import-main-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .import-main-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--yaya-text-1);
+        }
+
+        .import-main-sub {
+            font-size: 12px;
+            color: var(--yaya-text-4);
+        }
+
+        .yaya-import-upload {
+            display: block;
+            padding: 38px 20px;
+            border: 1px dashed var(--yaya-primary-border);
+            border-radius: var(--yaya-radius-lg);
+            background: var(--yaya-primary-bg);
+            text-align: center;
+            cursor: pointer;
+            transition: all .2s ease;
+        }
+
+        .yaya-import-upload:hover {
+            border-color: var(--yaya-primary);
+            background: #eef6ff;
+        }
+
+        .yaya-import-upload i {
+            display: block;
+            margin-bottom: 12px;
+            font-size: 46px;
+            color: var(--yaya-primary);
+        }
+
+        .yaya-import-upload-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--yaya-text-1);
+        }
+
+        .yaya-import-upload-sub {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--yaya-text-4);
+        }
+
+        .import-result {
+            display: none;
+            margin-top: 16px;
+            padding: 16px 18px;
+            border-radius: var(--yaya-radius-md);
+            border: 1px solid transparent;
+        }
+
+        .import-result.is-show {
+            display: block;
+        }
+
+        .import-result.is-success {
+            background: var(--yaya-success-bg);
+            border-color: var(--yaya-success-border-light);
+        }
+
+        .import-result.is-error {
+            background: var(--yaya-danger-bg);
+            border-color: var(--yaya-danger-border-light);
+        }
+
+        .import-result-head {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .import-result-icon {
+            font-size: 22px;
+            line-height: 24px;
+        }
+
+        .import-result.is-success .import-result-icon {
+            color: var(--yaya-success);
+        }
+
+        .import-result.is-error .import-result-icon {
+            color: var(--yaya-danger);
+        }
+
+        .import-result-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--yaya-text-1);
+        }
+
+        .import-result-desc {
+            margin-top: 4px;
+            font-size: 12px;
+            line-height: 20px;
+            color: var(--yaya-text-3);
+        }
+
+        .import-result-counts {
+            display: flex;
+            gap: 18px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .import-result-counts span {
+            font-size: 12px;
+            color: var(--yaya-text-3);
+        }
+
+        .import-result-counts b {
+            margin-left: 4px;
+            font-size: 16px;
+            color: var(--yaya-text-1);
+        }
+
+        .import-error-list {
+            max-height: 210px;
+            overflow-y: auto;
+            margin: 12px 0 0;
+            padding: 10px 12px 10px 28px;
+            background: rgba(255, 255, 255, .7);
+            border-radius: var(--yaya-radius-sm);
+            font-size: 12px;
+            line-height: 20px;
+            color: var(--yaya-text-2);
+        }
+
+        .import-error-list li::marker {
+            color: var(--yaya-danger);
+        }
+
+        .import-error-more {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--yaya-text-4);
+        }
+
+        .import-result-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 14px;
+        }
+        .layui-upload-drag .layui-icon{
+            color: #409eff;
+        }
+        @media (max-width: 760px) {
+            .import-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="layui-fluid">
+        <div class="import-layout">
+            <aside class="import-card">
+                <div class="import-step">
+                    <span class="import-step-num">1</span>下载模板
+                </div>
+                <div class="import-desc">
+                    使用系统统一模板填写用户信息。模板中带有字段说明，请勿修改表头名称。
+                </div>
+                <button type="button" id="btnTemplate" data-perm="user:import" class="yaya-btn yaya-primary import-template-btn">
+                    <i class="layui-icon layui-icon-download-circle" style="margin-right: 5px;"></i>下载用户导入模板
+                </button>
+                <div class="import-template-name">用户导入模板.xlsx</div>
+
+                <div class="import-divider"></div>
+
+                <div class="import-step">
+                    <span class="import-step-num">2</span>填写规则
+                </div>
+                <ul class="import-rules">
+                    <li><b>用户名、昵称、部门ID</b>为必填项，用户名全局唯一。</li>
+                    <li>密码留空时，初始密码为 <b>123456</b>。</li>
+                    <li>手机号、邮箱填写后，不能与其他未删除用户重复。</li>
+                    <li>角色/岗位填写<b>编号</b>，多个用英文逗号分隔。</li>
+                    <li>不允许分配 <b>ROOT</b> 角色。</li>
+                    <li>导入采用<b>整批校验</b>：任意一行有错误，整批都不会导入。</li>
+                </ul>
+                <div class="import-columns">
+                    <span>用户名*</span><span>昵称*</span><span>密码</span><span>手机号</span>
+                    <span>邮箱</span><span>性别</span><span>部门ID*</span><span>角色编号</span>
+                    <span>岗位编号</span><span>过期时间</span><span>备注</span>
+                </div>
+            </aside>
+
+            <section class="import-card">
+                <div class="import-main-head">
+                    <div>
+                        <div class="import-main-title">上传用户数据</div>
+                        <div class="import-main-sub">支持 .xlsx / .xls，单次建议不超过 1000 行</div>
+                    </div>
+                </div>
+                <div class="layui-upload-drag yaya-import-upload" id="uploadUserFile" data-perm="user:import">
+                    <i class="layui-icon layui-icon-upload-drag"></i>
+                    <div class="yaya-import-upload-title">点击选择文件，或将 Excel 拖拽到此处</div>
+                    <div class="yaya-import-upload-sub">文件选择后会立即上传并校验，请勿重复点击</div>
+                </div>
+
+                <div class="import-result" id="importResult"></div>
+            </section>
+        </div>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const layer = layui.layer;
+        const upload = layui.upload;
+
+        const MAX_ERRORS = 200;
+        let loadingIndex = null;
+
+        function escapeHtml(text) {
+            return String(text == null ? '' : text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function closeSelf() {
+            if (parent && parent.layer && parent.layer.getFrameIndex) {
+                const index = parent.layer.getFrameIndex(window.name);
+                parent.layer.close(index);
+                return;
+            }
+            layer.closeAll();
+        }
+
+        function hideResult() {
+            $('#importResult').removeClass('is-show').empty();
+        }
+
+        function closeLoading() {
+            if (loadingIndex !== null) {
+                layer.close(loadingIndex);
+                loadingIndex = null;
+            }
+        }
+
+        function resultHead(icon, title, desc) {
+            return '<div class="import-result-head">'
+                + '<i class="layui-icon ' + icon + ' import-result-icon"></i>'
+                + '<div><div class="import-result-title">' + title + '</div>'
+                + '<div class="import-result-desc">' + desc + '</div></div>'
+                + '</div>';
+        }
+
+        function showGenericError(message) {
+            $('#importResult')
+                .removeClass('is-success')
+                .addClass('is-error is-show')
+                .html(resultHead('layui-icon-close-fill', '导入失败', escapeHtml(message)));
+        }
+
+        function showSuccess(data) {
+            const html = resultHead(
+                'layui-icon-ok-circle',
+                '导入成功',
+                '本次导入已全部提交。模板中密码留空的用户，初始密码为 123456，请提醒及时修改。'
+            )
+                + '<div class="import-result-counts">'
+                + '<span>总行数<b>' + Number(data.total || 0) + '</b></span>'
+                + '<span>成功<b style="color:var(--yaya-success)">' + Number(data.successCount || 0) + '</b></span>'
+                + '<span>失败<b>0</b></span>'
+                + '</div>'
+                + '<div class="import-result-actions">'
+                + '<button type="button" class="yaya-btn yaya-primary" id="btnFinish">完成并刷新列表</button>'
+                + '</div>';
+            $('#importResult')
+                .removeClass('is-error')
+                .addClass('is-success is-show')
+                .html(html);
+            $('#btnFinish').on('click', closeSelf);
+        }
+
+        function showFailures(data) {
+            const errors = Array.isArray(data.errors) ? data.errors : [];
+            const shown = errors.slice(0, MAX_ERRORS);
+            let html = resultHead(
+                'layui-icon-close-fill',
+                '导入失败，本次没有写入任何用户',
+                '导入采用整批校验，请修正下列问题后重新上传。'
+            )
+                + '<div class="import-result-counts">'
+                + '<span>总行数<b>' + Number(data.total || 0) + '</b></span>'
+                + '<span>成功<b>0</b></span>'
+                + '<span>失败<b style="color:var(--yaya-danger)">' + Number(data.failCount || 0) + '</b></span>'
+                + '</div>';
+            if (shown.length > 0) {
+                html += '<ul class="import-error-list">'
+                    + shown.map(function (error) {
+                        return '<li>' + escapeHtml(error) + '</li>';
+                    }).join('')
+                    + '</ul>';
+                if (errors.length > shown.length) {
+                    html += '<div class="import-error-more">仅展示前 ' + MAX_ERRORS + ' 条，共 '
+                        + errors.length + ' 条错误，请下载文件后修正。</div>';
+                }
+            }
+            $('#importResult')
+                .removeClass('is-success')
+                .addClass('is-error is-show')
+                .html(html);
+        }
+
+        function downloadTemplate() {
+            loadingIndex = layer.load(0);
+            fetch(server_url + '/system/user/getUserImportTemplate', {
+                method: 'POST',
+                headers: {
+                    Authorization: token
+                }
+            }).then(async function (res) {
+                const contentType = res.headers.get('content-type') || '';
+                if (!res.ok || contentType.includes('application/json')) {
+                    let message = '模板下载失败，请稍后重试';
+                    try {
+                        const json = await res.json();
+                        message = json.msg || message;
+                    } catch (e) {
+                        // ignore
+                    }
+                    throw new Error(message);
+                }
+                const blob = await res.blob();
+                const disposition = res.headers.get('content-disposition') || '';
+                let filename = '用户导入模板.xlsx';
+                const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+                if (utf8Match) {
+                    filename = decodeURIComponent(utf8Match[1]);
+                }
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                closeLoading();
+                layer.msg('模板下载成功');
+            }).catch(function (error) {
+                closeLoading();
+                layer.msg(error.message || '模板下载失败，请稍后重试');
+            });
+        }
+
+        $('#btnTemplate').on('click', downloadTemplate);
+
+        upload.render({
+            elem: '#uploadUserFile',
+            url: server_url + '/system/user/importUser',
+            headers: {
+                Authorization: token
+            },
+            field: 'file',
+            accept: 'file',
+            exts: 'xlsx|xls',
+            size: 20 * 1024,
+            auto: true,
+            before: function () {
+                hideResult();
+                loadingIndex = layer.load(0);
+            },
+            done: function (resp) {
+                closeLoading();
+                if (!resp || resp.code !== 0) {
+                    showGenericError((resp && resp.msg) || '导入请求失败，请稍后重试');
+                    return;
+                }
+                const data = resp.data || {};
+                if (Number(data.successCount) > 0) {
+                    showSuccess(data);
+                } else if (Array.isArray(data.errors) && data.errors.length > 0) {
+                    showFailures(data);
+                } else {
+                    showGenericError('导入失败，请检查文件内容');
+                }
+            },
+            error: function () {
+                closeLoading();
+                showGenericError('上传失败，请检查网络或文件大小后重试');
+            }
+        });
+    });
+</script>
+</body>
+</html>

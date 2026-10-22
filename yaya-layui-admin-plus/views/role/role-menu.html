@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <link rel="stylesheet" href="../../font/bootstrap-icons.css">
+    <title>角色菜单授权</title>
+    <style>
+        html, body {
+            height: 100%;
+        }
+        body {
+            overflow-y: auto;
+        }
+        .yaya-box-fluid {
+            padding-bottom: 24px;
+        }
+        .layui-form-label {
+            width: 100px;
+        }
+        .layui-input-block {
+            margin-left: 130px;
+        }
+        .yaya-form-hint {
+            margin-top: 6px;
+            font-size: 12px;
+            color: var(--yaya-text-4);
+            line-height: 20px;
+        }
+        #menuTree .xm-select {
+            width: 100%;
+        }
+        .menu-auth-state {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--yaya-text-3);
+        }
+    </style>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="layui-fluid">
+        <div class="layui-form" style="margin-top: 10px;">
+            <div class="layui-form-item">
+                <label class="layui-form-label">角色</label>
+                <div class="layui-input-block">
+                    <input type="text" id="roleTitle" disabled class="layui-input layui-disabled">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">菜单权限</label>
+                <div class="layui-input-block">
+                    <div id="menuTree">
+                        <div class="menu-auth-state">菜单权限加载中...</div>
+                    </div>
+                    <div class="yaya-form-hint" id="authHint">勾选菜单/按钮后保存；保存时会自动补全上级菜单</div>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button type="button" id="btnSave" data-perm="role:menu" class="yaya-btn yaya-primary">保存授权</button>
+                    <button type="button" class="yaya-btn" id="btnCancel" style="margin-left: 10px;">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script src="../../js/xm-select.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const layer = layui.layer;
+
+        const roleId = new URLSearchParams(location.search).get('roleId');
+        let roleInfo = null;
+        let menuData = [];
+        let parentMap = {};
+        let menuSelect = null;
+
+        function buildMenuData(nodes) {
+            return (nodes || []).map(function (node) {
+                const isButton = Number(node.menuType) === 3;
+                parentMap[String(node.menuId)] = node.parentId;
+                return {
+                    name: node.menuTitle + (isButton ? '（按钮）' : ''),
+                    value: String(node.menuId),
+                    children: buildMenuData(node.children)
+                };
+            });
+        }
+
+        function collectExpandedKeys(nodes, keys) {
+            (nodes || []).forEach(function (node) {
+                if (node.children && node.children.length > 0) {
+                    keys.push(node.value);
+                    collectExpandedKeys(node.children, keys);
+                }
+            });
+            return keys;
+        }
+
+        // 保存时补全父级菜单, 避免只勾选子节点导致动态菜单树缺父级
+        function completeMenuIds(values) {
+            const set = new Set((values || []).map(String));
+            (values || []).forEach(function (value) {
+                let parentId = parentMap[String(value)];
+                while (parentId != null && String(parentId) !== '0' && !set.has(String(parentId))) {
+                    set.add(String(parentId));
+                    parentId = parentMap[String(parentId)];
+                }
+            });
+            // 雪花ID超过 JS Number 安全整数范围, 必须保持字符串, 否则保存时会被截断为无效菜单ID
+            return Array.from(set);
+        }
+
+        function disableSave() {
+            $('#btnSave').prop('disabled', true).css('opacity', .5);
+        }
+
+        function renderMenuSelect(grantedIds) {
+            if (menuData.length === 0) {
+                $('#menuTree').html('<div class="menu-auth-state">暂无可授权菜单</div>');
+                disableSave();
+                return;
+            }
+            $('#menuTree').empty();
+            menuSelect = xmSelect.render({
+                el: '#menuTree',
+                data: menuData,
+                tree: {
+                    show: true,
+                    strict: false,
+                    expandedKeys: collectExpandedKeys(menuData, [])
+                },
+                filterable: true,
+                tips: '请选择菜单/按钮权限',
+                theme: {
+                    color: '#409eff'
+                }
+            });
+            window.roleMenuSelect = menuSelect;
+            menuSelect.setValue((grantedIds || []).map(String));
+            if (roleInfo && String(roleInfo.roleCode || '').toUpperCase() === 'ROOT') {
+                disableSave();
+                $('#authHint').text('ROOT 角色默认拥有全部菜单，无需授权');
+            }
+        }
+
+        function loadMenuTree(callback) {
+            $.ajax({
+                url: server_url + '/system/menu/getMenuTree',
+                method: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    Authorization: token
+                },
+                data: '{}',
+                dataType: 'json',
+                success: function (resp) {
+                    if (resp.code !== 0) {
+                        $('#menuTree').html('<div class="menu-auth-state">' + resp.msg + '</div>');
+                        disableSave();
+                        return;
+                    }
+                    parentMap = {};
+                    menuData = buildMenuData(resp.data || []);
+                    callback();
+                },
+                error: function () {
+                    $('#menuTree').html('<div class="menu-auth-state">菜单数据加载失败，请稍后重试</div>');
+                    disableSave();
+                }
+            });
+        }
+
+        function loadGrantedMenuIds(callback) {
+            $.ajax({
+                url: server_url + '/system/role/getRoleMenuIds',
+                method: 'POST',
+                headers: {
+                    Authorization: token
+                },
+                data: {
+                    roleId: roleId
+                },
+                dataType: 'json',
+                success: function (resp) {
+                    callback(resp.code === 0 ? (resp.data || []) : []);
+                },
+                error: function () {
+                    callback([]);
+                }
+            });
+        }
+
+        function closeSelf() {
+            if (parent && parent.layer && parent.layer.getFrameIndex) {
+                const index = parent.layer.getFrameIndex(window.name);
+                parent.layer.close(index);
+                return;
+            }
+            layer.closeAll();
+        }
+
+        function finish(message) {
+            if (parent && parent.layer && parent.layer.msg) {
+                parent.layer.msg(message);
+            } else {
+                layer.msg(message);
+            }
+            closeSelf();
+        }
+
+        if (!roleId) {
+            disableSave();
+            $('#menuTree').html('<div class="menu-auth-state">缺少角色ID</div>');
+            layer.msg('缺少角色ID');
+            return;
+        }
+
+        $.ajax({
+            url: server_url + '/system/role/getRoleDetail',
+            method: 'POST',
+            headers: {
+                Authorization: token
+            },
+            data: {
+                roleId: roleId
+            },
+            dataType: 'json',
+            success: function (resp) {
+                if (resp.code !== 0) {
+                    disableSave();
+                    $('#menuTree').html('<div class="menu-auth-state">' + resp.msg + '</div>');
+                    return;
+                }
+                roleInfo = resp.data;
+                $('#roleTitle').val(roleInfo.roleName + '（' + roleInfo.roleCode + '）');
+                loadMenuTree(function () {
+                    loadGrantedMenuIds(function (ids) {
+                        renderMenuSelect(ids);
+                    });
+                });
+            },
+            error: function () {
+                disableSave();
+                $('#menuTree').html('<div class="menu-auth-state">角色信息加载失败，请稍后重试</div>');
+            }
+        });
+
+        $('#btnCancel').on('click', closeSelf);
+
+        $('#btnSave').on('click', function () {
+            if (!menuSelect) {
+                return;
+            }
+            const selected = completeMenuIds(menuSelect.getValue('value') || []);
+            const index = layer.load(0);
+            $.ajax({
+                url: server_url + '/system/role/saveRoleMenu',
+                method: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    Authorization: token
+                },
+                data: JSON.stringify({
+                    roleId: roleId,
+                    menuIds: selected
+                }),
+                dataType: 'json',
+                success: function (resp) {
+                    layer.close(index);
+                    if (resp.code === 0) {
+                        finish('菜单授权保存成功');
+                    } else {
+                        layer.msg(resp.msg);
+                    }
+                },
+                error: function () {
+                    layer.close(index);
+                    layer.msg('请求失败，请稍后重试');
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>

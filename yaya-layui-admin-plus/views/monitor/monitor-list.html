@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- LayUI css库 -->
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <!-- YaYa 通用样式库(含 --yaya-* 设计令牌) -->
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <!-- 第三方图标库(bootstrap)css -->
+    <link rel="stylesheet" href="../../font/bootstrap-icons.css">
+    <title>系统监控</title>
+    <style>
+        /* 页面局部样式: KPI 卡片/图表容器/状态徽标, 颜色统一取 --yaya-* 设计令牌 */
+        .monitor-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .monitor-kpi {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border: 1px solid var(--yaya-border);
+            border-radius: 10px;
+            background: var(--yaya-card);
+        }
+
+        .monitor-kpi-label { font-size: 12px; color: var(--yaya-text-3); }
+        .monitor-kpi-value {
+            margin-top: 6px;
+            font-size: 26px;
+            font-weight: 700;
+            line-height: 1.1;
+            color: var(--yaya-text-1);
+            font-variant-numeric: tabular-nums;
+        }
+        .monitor-kpi-trend { margin-top: 4px; font-size: 12px; color: var(--yaya-text-3); }
+        .trend-up { color: #529b2e; font-weight: 600; }
+        .trend-down { color: #f56c6c; font-weight: 600; }
+        .trend-stable { color: var(--yaya-text-3); }
+
+        .monitor-kpi-icon {
+            width: 42px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: none;
+            border-radius: 10px;
+            background: var(--yaya-primary-bg);
+            color: var(--yaya-primary);
+            font-size: 19px;
+        }
+
+        .monitor-charts {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 10px;
+            padding: 0 10px 10px;
+        }
+
+        .monitor-chart-box {
+            border: 1px solid var(--yaya-border);
+            border-radius: 10px;
+            background: var(--yaya-card);
+            padding: 12px;
+        }
+
+        .monitor-chart-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .monitor-chart-title { font-size: 14px; font-weight: 600; color: var(--yaya-text-1); }
+        .monitor-chart-sub { font-size: 12px; color: var(--yaya-text-3); }
+        .monitor-chart-body { height: 300px; }
+
+        .monitor-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .monitor-table th {
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 500;
+            color: var(--yaya-text-3);
+            border-bottom: 1px solid var(--yaya-border);
+        }
+        .monitor-table td {
+            padding: 10px 12px;
+            color: var(--yaya-text-2);
+            border-bottom: 1px solid var(--yaya-border);
+            font-variant-numeric: tabular-nums;
+        }
+        .monitor-table tr:last-child td { border-bottom: 0; }
+        .monitor-table tr:hover td { background: var(--yaya-gray-100); }
+
+        .monitor-badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+        .monitor-badge.is-ok { background: #f0f9eb; color: #67c23a; }
+        .monitor-badge.is-warn { background: #fdf6ec; color: #e6a23c; }
+        .monitor-badge.is-err { background: #fef0f0; color: #f56c6c; }
+
+        .monitor-status-dot {
+            width: 8px;
+            height: 8px;
+            display: inline-block;
+            margin-right: 6px;
+            border-radius: 50%;
+            background: #67c23a;
+            animation: monitor-pulse 2s infinite;
+        }
+        .monitor-status-dot.is-paused { background: var(--yaya-text-4); animation: none; }
+
+        @keyframes monitor-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .4; }
+        }
+
+        @media (max-width: 1200px) {
+            .monitor-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .monitor-charts { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .monitor-kpi-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <!-- 工具栏: 实时状态 + 刷新控制 -->
+    <div class="yaya-panel">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px;">
+            <span style="font-size: 13px; color: var(--yaya-text-3);">
+                <span class="monitor-status-dot" id="statusDot"></span>
+                <span id="statusText">实时更新中 · 每 5 秒刷新</span>
+            </span>
+            <button type="button" id="btnToggle" class="yaya-btn yaya-primary">暂停刷新</button>
+        </div>
+    </div>
+
+    <!-- KPI 卡片 -->
+    <div class="yaya-panel" style="margin-top: 10px;">
+        <div class="monitor-kpi-grid">
+            <div class="monitor-kpi">
+                <div>
+                    <div class="monitor-kpi-label">CPU 使用率</div>
+                    <div class="monitor-kpi-value" id="kpi-cpu">--</div>
+                    <div class="monitor-kpi-trend trend-stable" id="trend-cpu">-- 对比 1 分钟前</div>
+                </div>
+                <span class="monitor-kpi-icon"><i class="bi bi-cpu"></i></span>
+            </div>
+            <div class="monitor-kpi">
+                <div>
+                    <div class="monitor-kpi-label">内存使用率</div>
+                    <div class="monitor-kpi-value" id="kpi-mem">--</div>
+                    <div class="monitor-kpi-trend trend-stable" id="trend-mem">-- 对比 1 分钟前</div>
+                </div>
+                <span class="monitor-kpi-icon"><i class="bi bi-memory"></i></span>
+            </div>
+            <div class="monitor-kpi">
+                <div>
+                    <div class="monitor-kpi-label">请求量 (QPS)</div>
+                    <div class="monitor-kpi-value" id="kpi-qps">--</div>
+                    <div class="monitor-kpi-trend trend-stable" id="trend-qps">-- 对比 1 分钟前</div>
+                </div>
+                <span class="monitor-kpi-icon"><i class="bi bi-activity"></i></span>
+            </div>
+            <div class="monitor-kpi">
+                <div>
+                    <div class="monitor-kpi-label">错误率 (5xx)</div>
+                    <div class="monitor-kpi-value" id="kpi-err">--</div>
+                    <div class="monitor-kpi-trend trend-stable" id="trend-err">-- 对比 1 分钟前</div>
+                </div>
+                <span class="monitor-kpi-icon"><i class="bi bi-bug"></i></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图表区 -->
+    <div class="yaya-panel" style="margin-top: 10px;">
+        <div class="monitor-charts">
+            <div class="monitor-chart-box">
+                <div class="monitor-chart-head">
+                    <span class="monitor-chart-title">请求量 &amp; P99 延迟趋势</span>
+                    <span class="monitor-chart-sub">近 60 分钟 · 每分钟一个点(重启后从零累积)</span>
+                </div>
+                <div class="monitor-chart-body" id="mainChart"></div>
+            </div>
+            <div class="monitor-chart-box">
+                <div class="monitor-chart-head">
+                    <span class="monitor-chart-title">资源占用</span>
+                    <span class="monitor-chart-sub">CPU / 系统内存实时占用</span>
+                </div>
+                <div class="monitor-chart-body" id="gaugeChart"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 运行环境概览 -->
+    <div class="yaya-panel" style="margin-top: 10px;">
+        <div style="padding: 10px 10px 0;">
+            <span class="monitor-chart-title">运行环境概览</span>
+            <span class="monitor-chart-sub" style="margin-left: 8px;">JVM / 磁盘 / 中间件健康</span>
+        </div>
+        <div style="padding: 6px 10px 10px;">
+            <table class="monitor-table">
+                <thead>
+                    <tr>
+                        <th>指标项</th>
+                        <th>当前值</th>
+                        <th>说明</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody id="runtimeBody">
+                    <tr><td colspan="4" style="text-align:center;color:var(--yaya-text-3)">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script src="../../js/echarts.min.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const layer = layui.layer;
+
+        // 系统监控暴露服务器运行信息, 与缓存管理一致仅允许 ROOT 访问
+        if (typeof window.hasRole !== 'function' || !window.hasRole('ROOT')) {
+            layer.msg('仅超级管理员可访问系统监控');
+            $('#btnToggle').prop('disabled', true);
+            $('#statusDot').addClass('is-paused');
+            $('#statusText').text('已暂停（无访问权限）');
+            return;
+        }
+
+        // ==================== 图表初始化 ====================
+        const mainChart = echarts.init(document.getElementById('mainChart'));
+        const gaugeChart = echarts.init(document.getElementById('gaugeChart'));
+
+        const getMainOption = (d) => ({
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: '#ffffff',
+                borderColor: '#e2e8ee',
+                textStyle: {color: '#323251'}
+            },
+            legend: {data: ['QPS', 'P99 延迟(ms)'], textStyle: {color: '#949eb7'}, top: 0},
+            grid: {left: 50, right: 50, top: 40, bottom: 30},
+            xAxis: {
+                type: 'category', boundaryGap: false, data: d.timeLabels,
+                axisLine: {show: false}, axisTick: {show: false},
+                axisLabel: {color: '#949eb7', fontSize: 11}
+            },
+            yAxis: [
+                {
+                    type: 'value', name: 'QPS',
+                    axisLine: {show: false}, axisTick: {show: false},
+                    splitLine: {lineStyle: {color: '#e6eaeb', type: 'dashed'}},
+                    axisLabel: {color: '#949eb7'}
+                },
+                {
+                    type: 'value', name: 'ms', splitLine: {show: false},
+                    axisLine: {show: false}, axisTick: {show: false},
+                    axisLabel: {color: '#949eb7'}
+                }
+            ],
+            series: [
+                {
+                    name: 'QPS', type: 'line', smooth: true, symbol: 'none',
+                    data: d.qps,
+                    lineStyle: {width: 2}, itemStyle: {color: '#409eff'},
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            {offset: 0, color: 'rgba(64,158,255,0.18)'},
+                            {offset: 1, color: 'rgba(64,158,255,0.01)'}
+                        ])
+                    }
+                },
+                {
+                    name: 'P99 延迟(ms)', type: 'line', smooth: true, symbol: 'none',
+                    yAxisIndex: 1, data: d.p99Millis,
+                    lineStyle: {width: 2}, itemStyle: {color: '#ffae1f'}
+                }
+            ]
+        });
+
+        // 仪表盘：浅灰轨道 + 状态色进度弧，数值越大弧越长
+        const gaugeStatusColor = (v) => v >= 80 ? '#f56c6c' : v >= 60 ? '#e6a23c' : '#67c23a';
+
+        const gaugeSeries = (value, name, centerX) => ({
+            type: 'gauge', center: [centerX, '55%'], radius: '72%',
+            startAngle: 210, endAngle: -30, min: 0, max: 100,
+            title: {show: true, offsetCenter: [0, '78%'], fontSize: 13, color: '#4d5875'},
+            detail: {
+                fontSize: 24, fontWeight: 700, offsetCenter: [0, '35%'],
+                color: '#323251', formatter: '{value}%'
+            },
+            data: [{value: Math.round(value), name}],
+            axisLine: {lineStyle: {width: 16, color: [[1, '#e6eaeb']]}},
+            progress: {show: true, width: 16, roundCap: true, itemStyle: {color: gaugeStatusColor(value)}},
+            pointer: {show: false}, axisTick: {show: false}, splitLine: {show: false}, axisLabel: {show: false}
+        });
+
+        const getGaugeOption = (cpu, mem) => ({
+            series: [gaugeSeries(cpu, 'CPU', '30%'), gaugeSeries(mem, '内存', '70%')]
+        });
+
+        // ==================== KPI 更新(与约 1 分钟前的采样对比) ====================
+        const kpiHistory = [];  // {time, cpu, mem, qps, err}
+
+        function pushHistory(d) {
+            kpiHistory.push({time: Date.now(), cpu: d.cpuPercent, mem: d.memPercent, qps: d.qps, err: d.errRatePercent});
+            while (kpiHistory.length > 0 && Date.now() - kpiHistory[0].time > 120000) {
+                kpiHistory.shift();
+            }
+        }
+
+        function compareWithMinuteAgo(key, value) {
+            // 取约 1 分钟前的最近一条历史(12 个采样点 × 5 秒)
+            let reference = null;
+            for (let i = kpiHistory.length - 1; i >= 0; i--) {
+                const age = Date.now() - kpiHistory[i].time;
+                if (age >= 55000) {
+                    reference = kpiHistory[i];
+                    break;
+                }
+                if (age < 30000) {
+                    break;
+                }
+            }
+            if (!reference) {
+                $('#trend-' + key).attr('class', 'monitor-kpi-trend trend-stable').text('积累对比数据中...');
+                return;
+            }
+            const delta = value - reference[key];
+            const trendEl = $('#trend-' + key);
+            if (Math.abs(delta) < 0.05) {
+                trendEl.attr('class', 'monitor-kpi-trend trend-stable').text('→ 持平，对比 1 分钟前');
+            } else if (delta > 0) {
+                trendEl.attr('class', 'monitor-kpi-trend trend-up').text('↑ ' + Math.abs(delta).toFixed(1) + '，对比 1 分钟前');
+            } else {
+                trendEl.attr('class', 'monitor-kpi-trend trend-down').text('↓ ' + Math.abs(delta).toFixed(1) + '，对比 1 分钟前');
+            }
+        }
+
+        // ==================== 运行环境概览 ====================
+        function badge(status, text) {
+            return '<span class="monitor-badge is-' + status + '">' + text + '</span>';
+        }
+
+        function formatUptime(millis) {
+            if (!millis || millis < 0) {
+                return '-';
+            }
+            const minutes = Math.floor(millis / 60000);
+            const days = Math.floor(minutes / 1440);
+            const hours = Math.floor((minutes % 1440) / 60);
+            const mins = minutes % 60;
+            return (days > 0 ? days + ' 天 ' : '') + hours + ' 小时 ' + mins + ' 分';
+        }
+
+        function updateRuntime(d) {
+            const heapPercent = d.jvmHeapMaxMb > 0 ? d.jvmHeapUsedMb * 100 / d.jvmHeapMaxMb : 0;
+            const rows = [
+                {
+                    name: 'JVM 堆内存',
+                    value: d.jvmHeapUsedMb.toFixed(1) + ' MB / ' + d.jvmHeapMaxMb.toFixed(0) + ' MB',
+                    desc: '堆内存使用率超过 80% 需要关注',
+                    status: heapPercent > 80 ? ['err', '告警'] : heapPercent > 60 ? ['warn', '偏高'] : ['ok', '正常']
+                },
+                {
+                    name: '系统负载',
+                    value: d.loadAverage < 0 ? '当前系统不支持' : d.loadAverage.toFixed(2),
+                    desc: '1 分钟平均负载，CPU 核数以内为正常',
+                    status: d.loadAverage < 0 ? ['ok', '-'] : d.loadAverage > 4 ? ['err', '告警'] : d.loadAverage > 2 ? ['warn', '偏高'] : ['ok', '正常']
+                },
+                {
+                    name: '磁盘使用率',
+                    value: d.diskUsedPercent.toFixed(1) + '%（已用 ' + d.diskUsedGb.toFixed(1) + ' GB / 共 ' + d.diskTotalGb.toFixed(1) + ' GB）',
+                    desc: '应用日志与上传目录所在磁盘',
+                    status: d.diskUsedPercent > 90 ? ['err', '告警'] : d.diskUsedPercent > 75 ? ['warn', '偏高'] : ['ok', '正常']
+                },
+                {
+                    name: 'JVM 线程数',
+                    value: d.threadCount + ' 个',
+                    desc: '活跃线程数量',
+                    status: ['ok', '正常']
+                },
+                {
+                    name: '应用运行时长',
+                    value: formatUptime(d.uptimeMillis),
+                    desc: '自最近一次启动起计',
+                    status: ['ok', '正常']
+                },
+                {
+                    name: 'Redis 连接',
+                    value: d.redisOk ? '正常' : '不可用',
+                    desc: '登录会话与验证码存储',
+                    status: d.redisOk ? ['ok', '正常'] : ['err', '不可用']
+                },
+                {
+                    name: '数据库连接',
+                    value: d.dbOk ? '正常' : '不可用',
+                    desc: '业务数据源',
+                    status: d.dbOk ? ['ok', '正常'] : ['err', '不可用']
+                }
+            ];
+            $('#runtimeBody').html(rows.map(row => '<tr>'
+                + '<td style="font-weight:600;color:var(--yaya-text-1)">' + row.name + '</td>'
+                + '<td>' + row.value + '</td>'
+                + '<td>' + row.desc + '</td>'
+                + '<td>' + badge(row.status[0], row.status[1]) + '</td>'
+                + '</tr>').join(''));
+        }
+
+        // ==================== 接口轮询 ====================
+        const BASE_URL = server_url + '/system/monitor';
+
+        function fetchMonitor(path) {
+            return $.ajax({
+                url: BASE_URL + path,
+                method: 'POST',
+                headers: {Authorization: token},
+                contentType: 'application/json',
+                data: '{}',
+                dataType: 'json'
+            });
+        }
+
+        function setStatus(failed, text) {
+            $('#statusDot').toggleClass('is-paused', failed);
+            $('#statusText').text(text);
+        }
+
+        function refreshOverview() {
+            fetchMonitor('/getMonitorOverview')
+                .done(function (res) {
+                    if (res.code !== 0 || !res.data) {
+                        setStatus(true, '数据获取失败：' + (res.msg || '未知错误') + '，将继续重试');
+                        return;
+                    }
+                    const d = res.data;
+                    pushHistory(d);
+                    $('#kpi-cpu').text(Number(d.cpuPercent).toFixed(1) + '%');
+                    $('#kpi-mem').text(Number(d.memPercent).toFixed(1) + '%');
+                    $('#kpi-qps').text(Number(d.qps).toFixed(1));
+                    $('#kpi-err').text(Number(d.errRatePercent).toFixed(3) + '%');
+                    compareWithMinuteAgo('cpu', d.cpuPercent);
+                    compareWithMinuteAgo('mem', d.memPercent);
+                    compareWithMinuteAgo('qps', d.qps);
+                    compareWithMinuteAgo('err', d.errRatePercent);
+                    gaugeChart.setOption(getGaugeOption(d.cpuPercent, d.memPercent));
+                    updateRuntime(d);
+                    setStatus(false, '实时更新中 · 每 5 秒刷新');
+                })
+                .fail(function () {
+                    setStatus(true, '数据获取失败，将继续重试');
+                });
+        }
+
+        function refreshTrend() {
+            fetchMonitor('/getMonitorTrend')
+                .done(function (res) {
+                    if (res.code === 0 && res.data) {
+                        mainChart.setOption(getMainOption(res.data));
+                    }
+                })
+                .fail(function () {
+                    // 趋势失败不打断概览刷新, 状态由概览统一提示
+                });
+        }
+
+        // ==================== 主控循环 ====================
+        let overviewTimer = null;
+        let trendTimer = null;
+        let isRunning = true;
+
+        function setRunning(running) {
+            isRunning = running;
+            if (isRunning) {
+                $('#btnToggle').text('暂停刷新').removeClass('yaya-primary');
+                setStatus(false, '实时更新中 · 每 5 秒刷新');
+                refreshOverview();
+                refreshTrend();
+                overviewTimer = setInterval(refreshOverview, 5000);
+                trendTimer = setInterval(refreshTrend, 30000);
+            } else {
+                $('#btnToggle').text('恢复刷新').addClass('yaya-primary');
+                setStatus(true, '已暂停');
+                clearInterval(overviewTimer);
+                clearInterval(trendTimer);
+            }
+        }
+
+        $('#btnToggle').on('click', function () {
+            setRunning(!isRunning);
+        });
+
+        // 窗口 resize 自适应
+        window.addEventListener('resize', () => {
+            mainChart.resize();
+            gaugeChart.resize();
+        });
+
+        // 启动
+        setRunning(true);
+    });
+</script>
+</body>
+</html>

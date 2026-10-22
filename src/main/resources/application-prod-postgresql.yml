@@ -1,0 +1,7 @@
+# PostgreSQL 数据源配置(spring.profiles.active 中包含 prod-postgresql 时生效)
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://172.17.161.209:5432/yaya
+    username: postgres
+    password: xxx

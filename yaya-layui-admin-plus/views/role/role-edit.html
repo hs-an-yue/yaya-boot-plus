@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <link rel="stylesheet" href="../../font/bootstrap-icons.css">
+    <title>角色编辑</title>
+    <style>
+        html, body {
+            height: 100%;
+        }
+        body {
+            overflow-y: auto;
+        }
+        .yaya-box-fluid {
+            padding-bottom: 24px;
+        }
+        .layui-form-label {
+            width: 100px;
+        }
+        .layui-input-block {
+            margin-left: 130px;
+        }
+        .yaya-form-hint {
+            margin-top: 4px;
+            font-size: 12px;
+            color: var(--yaya-text-4);
+            line-height: 20px;
+        }
+        #deptTree .xm-select {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="layui-fluid">
+        <form class="layui-form" lay-filter="roleForm" style="margin-top: 10px;">
+            <input type="hidden" name="roleId">
+            <div class="layui-form-item">
+                <label class="layui-form-label">角色名称</label>
+                <div class="layui-input-block">
+                    <input type="text" name="roleName" lay-verify="required" maxlength="200"
+                           placeholder="请输入角色名称" autocomplete="off" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">角色编号</label>
+                <div class="layui-input-block">
+                    <input type="text" name="roleCode" disabled class="layui-input layui-disabled">
+                    <div class="yaya-form-hint">角色编号创建后不允许修改</div>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">数据权限</label>
+                <div class="layui-input-block">
+                    <select name="dataScope" lay-filter="dataScope">
+                        <option value="1">所有数据</option>
+                        <option value="2">部门及子部门数据</option>
+                        <option value="3">本部门数据</option>
+                        <option value="4">本人数据</option>
+                        <option value="5">自定义部门数据</option>
+                    </select>
+                    <div class="yaya-form-hint" id="rootScopeHint" style="display: none;">ROOT 角色数据权限固定为所有数据</div>
+                </div>
+            </div>
+            <div class="layui-form-item" id="deptItem" style="display: none;">
+                <label class="layui-form-label">自定义部门</label>
+                <div class="layui-input-block">
+                    <div id="deptTree"></div>
+                    <div class="yaya-form-hint">仅所选部门生效，不自动包含子部门</div>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">状态</label>
+                <div class="layui-input-block">
+                    <input type="radio" name="status" value="1" title="正常" checked>
+                    <input type="radio" name="status" value="0" title="停用">
+                    <div class="yaya-form-hint" id="rootStatusHint" style="display: none;">ROOT 角色不允许停用</div>
+                </div>
+            </div>
+            <div class="layui-form-item layui-form-text">
+                <label class="layui-form-label">备注</label>
+                <div class="layui-input-block">
+                    <textarea name="remark" maxlength="500" placeholder="请输入备注" class="layui-textarea"></textarea>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button type="button" id="btnSave" data-perm="role:update" class="yaya-btn yaya-primary" lay-submit lay-filter="save">保存</button>
+                    <button type="button" class="yaya-btn" id="btnCancel" style="margin-left: 10px;">取消</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script src="../../js/xm-select.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const layer = layui.layer;
+        const form = layui.form;
+
+        const roleId = new URLSearchParams(location.search).get('roleId');
+        let roleInfo = null;
+        let deptData = [];
+        let deptSelect = null;
+        let treeLoaded = false;
+        let treeLoading = false;
+        let savedDeptIds = [];
+
+        function disableSave() {
+            $('#btnSave').prop('disabled', true).css('opacity', .5);
+        }
+
+        function isRootRole() {
+            return roleInfo && String(roleInfo.roleCode || '').toUpperCase() === 'ROOT';
+        }
+
+        function buildDeptData(nodes) {
+            return (nodes || []).map(function (node) {
+                return {
+                    name: node.deptName,
+                    value: String(node.deptId),
+                    children: buildDeptData(node.children)
+                };
+            });
+        }
+
+        function collectExpandedKeys(nodes, keys) {
+            (nodes || []).forEach(function (node) {
+                if (node.children && node.children.length > 0) {
+                    keys.push(node.value);
+                    collectExpandedKeys(node.children, keys);
+                }
+            });
+            return keys;
+        }
+
+        function loadDeptTree(callback) {
+            if (treeLoading) {
+                return;
+            }
+            treeLoading = true;
+            $.ajax({
+                url: server_url + '/system/dept/getDeptTree',
+                method: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    Authorization: token
+                },
+                data: '{}',
+                dataType: 'json',
+                success: function (resp) {
+                    if (resp.code !== 0) {
+                        treeLoading = false;
+                        layer.msg(resp.msg);
+                        return;
+                    }
+                    deptData = buildDeptData(resp.data || []);
+                    treeLoaded = true;
+                    treeLoading = false;
+                    if (callback) {
+                        callback();
+                    }
+                },
+                error: function () {
+                    treeLoading = false;
+                    layer.msg('部门数据加载失败，请稍后重试');
+                }
+            });
+        }
+
+        function ensureDeptSelect() {
+            if (!treeLoaded) {
+                loadDeptTree(function () {
+                    ensureDeptSelect();
+                    if (savedDeptIds.length > 0 && deptSelect) {
+                        deptSelect.setValue(savedDeptIds);
+                    }
+                });
+                return;
+            }
+            if (deptSelect) {
+                return;
+            }
+            deptSelect = xmSelect.render({
+                el: '#deptTree',
+                data: deptData,
+                tree: {
+                    show: true,
+                    strict: false,
+                    expandedKeys: collectExpandedKeys(deptData, [])
+                },
+                filterable: true,
+                tips: '请选择自定义部门',
+                theme: {
+                    color: '#409eff'
+                }
+            });
+            window.roleDeptSelect = deptSelect;
+        }
+
+        function setDeptSelection(ids) {
+            savedDeptIds = (ids || []).map(String);
+            if (deptSelect) {
+                deptSelect.setValue(savedDeptIds);
+            }
+        }
+
+        function toggleDept(scope) {
+            const show = Number(scope) === 5;
+            $('#deptItem').toggle(show);
+            if (show) {
+                ensureDeptSelect();
+                if (savedDeptIds.length > 0) {
+                    setDeptSelection(savedDeptIds);
+                }
+            }
+        }
+
+        form.on('select(dataScope)', function (data) {
+            toggleDept(data.value);
+        });
+
+        $('select[name=dataScope]').on('change', function () {
+            toggleDept(this.value);
+        });
+
+        function loadRoleDeptIds(callback) {
+            $.ajax({
+                url: server_url + '/system/role/getRoleDeptIds',
+                method: 'POST',
+                headers: {
+                    Authorization: token
+                },
+                data: {
+                    roleId: roleId
+                },
+                dataType: 'json',
+                success: function (resp) {
+                    callback(resp.code === 0 ? (resp.data || []) : []);
+                },
+                error: function () {
+                    callback([]);
+                }
+            });
+        }
+
+        if (!roleId) {
+            disableSave();
+            layer.msg('缺少角色ID');
+        }
+
+        if (roleId) {
+            $.ajax({
+                url: server_url + '/system/role/getRoleDetail',
+                method: 'POST',
+                headers: {
+                    Authorization: token
+                },
+                data: {
+                    roleId: roleId
+                },
+                dataType: 'json',
+                success: function (resp) {
+                    if (resp.code !== 0) {
+                        disableSave();
+                        layer.msg(resp.msg);
+                        return;
+                    }
+                    roleInfo = resp.data;
+                    form.val('roleForm', {
+                        roleId: String(roleInfo.roleId),
+                        roleName: roleInfo.roleName || '',
+                        roleCode: roleInfo.roleCode || '',
+                        dataScope: String(roleInfo.dataScope == null ? 1 : roleInfo.dataScope),
+                        status: String(roleInfo.status == null ? 1 : roleInfo.status),
+                        remark: roleInfo.remark || ''
+                    });
+                    form.render('radio');
+                    form.render('select');
+
+                    if (isRootRole()) {
+                        $('select[name=dataScope]').prop('disabled', true);
+                        $('input[name=status]').prop('disabled', true);
+                        $('#rootScopeHint').show();
+                        $('#rootStatusHint').show();
+                        form.render('select');
+                        form.render('radio');
+                    }
+                    if (Number(roleInfo.dataScope) === 5) {
+                        $('#deptItem').show();
+                        loadRoleDeptIds(function (ids) {
+                            savedDeptIds = (ids || []).map(String);
+                            loadDeptTree(function () {
+                                ensureDeptSelect();
+                                setDeptSelection(savedDeptIds);
+                            });
+                        });
+                    } else {
+                        loadDeptTree();
+                    }
+                },
+                error: function () {
+                    disableSave();
+                    layer.msg('角色详情加载失败，请稍后重试');
+                }
+            });
+        }
+
+        function closeSelf() {
+            if (parent && parent.layer && parent.layer.getFrameIndex) {
+                const index = parent.layer.getFrameIndex(window.name);
+                parent.layer.close(index);
+                return;
+            }
+            layer.closeAll();
+        }
+
+        function finish(message) {
+            if (parent && parent.layer && parent.layer.msg) {
+                parent.layer.msg(message);
+            } else {
+                layer.msg(message);
+            }
+            closeSelf();
+        }
+
+        function saveRoleDept(targetRoleId, deptIds, callback) {
+            $.ajax({
+                url: server_url + '/system/role/saveRoleDept',
+                method: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    Authorization: token
+                },
+                data: JSON.stringify({
+                    roleId: targetRoleId,
+                    deptIds: deptIds
+                }),
+                dataType: 'json',
+                success: function (resp) {
+                    callback(resp.code === 0, resp.msg);
+                },
+                error: function () {
+                    callback(false, '请求失败，请稍后重试');
+                }
+            });
+        }
+
+        $('#btnCancel').on('click', closeSelf);
+
+        form.on('submit(save)', function (data) {
+            if (!roleId || !roleInfo) {
+                layer.msg('角色信息未加载');
+                return false;
+            }
+            const field = data.field;
+            const root = isRootRole();
+            const dataScope = root ? 1 : Number(field.dataScope);
+            const status = root ? 1 : Number(field.status);
+            const deptIds = (dataScope === 5 && deptSelect)
+                ? (deptSelect.getValue('value') || []).map(String)
+                : [];
+            if (dataScope === 5 && deptIds.length === 0) {
+                layer.msg('请选择自定义部门');
+                return false;
+            }
+            const loading = layer.load(0);
+            $.ajax({
+                url: server_url + '/system/role/updateRole',
+                method: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    Authorization: token
+                },
+                data: JSON.stringify({
+                    roleId: roleId,
+                    roleName: $.trim(field.roleName),
+                    roleCode: roleInfo.roleCode,
+                    dataScope: dataScope,
+                    status: status,
+                    remark: $.trim(field.remark || '') || null
+                }),
+                dataType: 'json',
+                success: function (resp) {
+                    layer.close(loading);
+                    if (resp.code !== 0) {
+                        layer.msg(resp.msg);
+                        return;
+                    }
+                    if (dataScope !== 5) {
+                        finish('更新成功');
+                        return;
+                    }
+                    saveRoleDept(roleId, deptIds, function (ok, msg) {
+                        if (ok) {
+                            finish('更新成功');
+                        } else {
+                            layer.msg('自定义部门保存失败：' + msg);
+                        }
+                    });
+                },
+                error: function () {
+                    layer.close(loading);
+                    layer.msg('请求失败，请稍后重试');
+                }
+            });
+            return false;
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yaya.system.mapper.SysNoticeTypeMapper">
+
+    <update id="logicDeleteById">
+        UPDATE sys_notice_type
+        SET is_deleted = 1,
+            update_by = #{updateBy},
+            update_time = #{updateTime}
+        WHERE notice_type_id = #{noticeTypeId}
+          AND is_deleted = 0
+    </update>
+
+    <select id="selectNoticeTypePage" resultType="com.yaya.system.domain.entity.SysNoticeType">
+        SELECT * FROM sys_notice_type nt ${ew.customSqlSegment}
+    </select>
+
+</mapper>

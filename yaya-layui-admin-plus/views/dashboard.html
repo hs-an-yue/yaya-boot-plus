@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <!-- 响应式配置 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- LayUI css库 -->
+    <link rel="stylesheet" href="../layui/css/layui.css">
+    <!-- YaYa 通用样式库(含 --yaya-* 设计令牌) -->
+    <link rel="stylesheet" href="../css/yaya-common.css">
+    <!-- 第三方图标库(bootstrap)css -->
+    <link rel="stylesheet" href="../font/bootstrap-icons.css">
+    <title>仪表盘</title>
+    <style>
+        body{
+            color: var(--yaya-text-1);
+        }
+        [hidden]{
+            display: none !important;
+        }
+        /* ================= 通用卡片 ================= */
+        .layui-row{
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .dash-card{
+            background-color: var(--yaya-card);
+            border: 1px solid var(--yaya-card-border);
+            border-radius: var(--yaya-radius-lg);
+            box-shadow: var(--yaya-shadow);
+            padding: 20px;
+            height: 100%;
+            box-sizing: border-box;
+        }
+        .card-flex{
+            display: flex;
+            flex-direction: column;
+        }
+        .card-head{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .card-head h4{
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--yaya-text-1);
+        }
+        .card-sub{
+            margin-top: 4px;
+            font-size: 13px;
+            color: var(--yaya-text-3);
+        }
+        .trend-up{ color: var(--yaya-success-active); font-weight: 600; }
+        .trend-down{ color: var(--yaya-danger); font-weight: 600; }
+        .stat-extra{
+            color: var(--yaya-success-active);
+            font-weight: 600;
+        }
+
+        /* ================= 加载/错误状态 ================= */
+        .dashboard-state{
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 38px;
+            margin-bottom: 15px;
+            padding: 8px 14px;
+            border: 1px solid var(--yaya-border);
+            border-radius: var(--yaya-radius-md);
+            color: var(--yaya-text-3);
+            background: var(--yaya-card);
+            box-shadow: var(--yaya-shadow);
+            font-size: 13px;
+        }
+        .dashboard-state.is-error{
+            color: var(--yaya-danger);
+            border-color: var(--yaya-danger-border-light);
+            background: var(--yaya-danger-bg);
+        }
+        .state-spinner{
+            width: 15px;
+            height: 15px;
+            flex: 0 0 15px;
+            border: 2px solid var(--yaya-primary-border-light);
+            border-top-color: var(--yaya-primary);
+            border-radius: 50%;
+            animation: state-spin .8s linear infinite;
+        }
+        .dashboard-retry{
+            margin-left: auto;
+            height: 26px;
+            padding: 0 12px;
+            border: 1px solid var(--yaya-danger-border);
+            border-radius: 5px;
+            color: var(--yaya-danger);
+            background: var(--yaya-card);
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .dashboard-retry:hover{
+            background: var(--yaya-danger-bg);
+        }
+        @keyframes state-spin{
+            to { transform: rotate(360deg); }
+        }
+
+        /* ================= 第一行:统计卡片 ================= */
+        .stat-card{
+            cursor: default;
+            transition: all .2s ease;
+        }
+        .stat-card:hover{
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,.08);
+        }
+        .stat-title{
+            font-size: 13px;
+            color: var(--yaya-text-3);
+        }
+        .stat-value{
+            margin-top: 8px;
+            font-size: 30px;
+            font-weight: 700;
+            line-height: 1.1;
+            color: var(--yaya-text-1);
+            font-variant-numeric: tabular-nums;
+        }
+        .stat-foot{
+            margin-top: 8px;
+            font-size: 13px;
+            color: var(--yaya-text-3);
+        }
+        /* 当前在线：实时状态，不使用日环比 */
+        .online-status{
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .online-dot{
+            width: 6px;
+            height: 6px;
+            flex: 0 0 6px;
+            border-radius: 50%;
+            background: var(--yaya-success);
+            box-shadow: 0 0 0 3px var(--yaya-success-bg);
+            animation: online-pulse 2s ease-in-out infinite;
+        }
+        .online-sep{
+            color: var(--yaya-text-4);
+        }
+        @keyframes online-pulse{
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .55; transform: scale(.85); }
+        }
+        @media (prefers-reduced-motion: reduce){
+            .online-dot,
+            .state-spinner{ animation: none; }
+        }
+        /* 右上角图标芯片 */
+        .stat-icon{
+            width: 46px;
+            height: 46px;
+            border-radius: 10px;
+            background-color: var(--yaya-primary-bg);
+            color: var(--yaya-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        /* ================= 第二行:图表卡片 ================= */
+        .chart-shell{
+            position: relative;
+            width: 100%;
+            height: 250px;
+        }
+        .chart-shell.is-line{
+            display: flex;
+            flex: 1 1 auto;
+            min-height: 300px;
+            height: auto;
+            margin-top: 10px;
+        }
+        #barChart{
+            width: 100%;
+            height: 100%;
+        }
+        #lineChart{
+            width: 100%;
+            height: 100%;
+            min-height: 300px;
+            flex: 1 1 auto;
+        }
+        .chart-empty{
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            color: var(--yaya-text-4);
+            font-size: 13px;
+            pointer-events: none;
+            background: color-mix(in srgb, var(--yaya-card) 72%, transparent);
+        }
+        .chart-empty.is-show{
+            display: flex;
+        }
+        /* 用户概述 */
+        .overview-title{
+            margin-top: 16px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .overview-desc{
+            margin-top: 6px;
+            font-size: 14px;
+            color: var(--yaya-text-2);
+        }
+        /* 用户概述 - 4项小统计 */
+        .mini-stats{
+            margin-top: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 36px;
+        }
+        .mini-stats .num{
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--yaya-text-1);
+            font-variant-numeric: tabular-nums;
+        }
+        .mini-stats .num.trend-up{
+            color: var(--yaya-success-active);
+        }
+        .mini-stats .num.trend-down{
+            color: var(--yaya-danger);
+        }
+        .mini-stats .label{
+            margin-top: 4px;
+            font-size: 12px;
+            color: var(--yaya-text-4);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="yaya-box-fluid">
+        <div class="dashboard-state" id="dashboardState">
+            <span class="state-spinner" aria-hidden="true"></span>
+            <span id="dashboardStateText">正在加载首页数据...</span>
+            <button type="button" class="dashboard-retry" id="dashboardRetry" hidden>重新加载</button>
+        </div>
+
+        <!-- ============ 第一行:统计卡片 ============ -->
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md3 layui-col-sm6">
+                <div class="dash-card stat-card">
+                    <div class="card-head">
+                        <div>
+                            <div class="stat-title">总用户量</div>
+                            <div class="stat-value" id="totalUsersValue">--</div>
+                        </div>
+                        <div class="stat-icon"><i class="bi bi-people"></i></div>
+                    </div>
+                    <div class="stat-foot">今年新增 <span class="stat-extra" id="totalUsersThisYear">--</span></div>
+                </div>
+            </div>
+            <div class="layui-col-md3 layui-col-sm6">
+                <div class="dash-card stat-card">
+                    <div class="card-head">
+                        <div>
+                            <div class="stat-title">本周新增用户</div>
+                            <div class="stat-value" id="weekNewUsersValue">--</div>
+                        </div>
+                        <div class="stat-icon"><i class="bi bi-calendar2-plus"></i></div>
+                    </div>
+                    <div class="stat-foot">较上周 <span id="weekCompare">--</span></div>
+                </div>
+            </div>
+            <div class="layui-col-md3 layui-col-sm6">
+                <div class="dash-card stat-card">
+                    <div class="card-head">
+                        <div>
+                            <div class="stat-title">本月新增用户</div>
+                            <div class="stat-value" id="monthNewUsersValue">--</div>
+                        </div>
+                        <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                    </div>
+                    <div class="stat-foot">较上月 <span id="monthCompare">--</span></div>
+                </div>
+            </div>
+            <div class="layui-col-md3 layui-col-sm6">
+                <div class="dash-card stat-card">
+                    <div class="card-head">
+                        <div>
+                            <div class="stat-title">当前在线</div>
+                            <div class="stat-value" id="onlineUsersValue">--</div>
+                        </div>
+                        <div class="stat-icon"><i class="bi bi-broadcast"></i></div>
+                    </div>
+                    <div class="stat-foot online-status">
+                        <span class="online-dot" aria-hidden="true"></span>
+                        <span>实时登录会话</span>
+                        <span class="online-sep">·</span>
+                        <span><span id="onlineUpdatedAt">--:--</span> 更新</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ 第二行:柱状图卡片 + 增长折线卡片 ============ -->
+        <div class="layui-row layui-col-space15" style="margin-top: 15px;">
+            <!-- 左:近7天新增用户 + 用户概述 -->
+            <div class="layui-col-md5">
+                <div class="dash-card">
+                    <div class="chart-shell">
+                        <div id="barChart"></div>
+                        <div class="chart-empty" id="barEmpty">暂无新增用户数据</div>
+                    </div>
+                    <div class="overview-title">用户概述</div>
+                    <div class="card-sub">比上周 <span id="weeklyGrowthCompare">--</span></div>
+                    <div class="overview-desc">近一周，每天用户增长量</div>
+                    <div class="mini-stats">
+                        <div>
+                            <div class="num" id="miniTotalUsers">--</div>
+                            <div class="label">总用户量</div>
+                        </div>
+                        <div>
+                            <div class="num" id="miniMonthNewUsers">--</div>
+                            <div class="label">本月新增</div>
+                        </div>
+                        <div>
+                            <div class="num" id="miniWeekNewUsers">--</div>
+                            <div class="label">本周新增</div>
+                        </div>
+                        <div>
+                            <div class="num" id="miniWeekCompare">--</div>
+                            <div class="label">周同比</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 右:近12个月用户增长 -->
+            <div class="layui-col-md7">
+                <div class="dash-card card-flex">
+                    <div class="card-head">
+                        <div>
+                            <h4>用户增长量</h4>
+                            <div class="card-sub">近 12 个月每月新增用户</div>
+                        </div>
+                    </div>
+                    <div class="chart-shell is-line">
+                        <div id="lineChart"></div>
+                        <div class="chart-empty" id="lineEmpty">暂无新增用户数据</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <script src="../layui/layui.js"></script>
+    <script src="../js/echarts.min.js"></script>
+    <script src="../js/server.js"></script>
+    <script>
+        layui.use(function (){
+            const $ = layui.$;
+            const barDom = document.getElementById('barChart');
+            const lineDom = document.getElementById('lineChart');
+            const barChart = echarts.init(barDom);
+            const lineChart = echarts.init(lineDom);
+            let loading = false;
+            let lastLoadedAt = 0;
+
+            function setState(type, message) {
+                const state = $('#dashboardState');
+                const retry = $('#dashboardRetry');
+                const spinner = state.find('.state-spinner');
+                if (type === 'hidden') {
+                    state.prop('hidden', true);
+                    return;
+                }
+                state.prop('hidden', false)
+                    .toggleClass('is-error', type === 'error');
+                spinner.prop('hidden', type !== 'loading');
+                $('#dashboardStateText').text(message || '正在加载首页数据...');
+                retry.prop('hidden', type !== 'error');
+            }
+
+            function formatNumber(value) {
+                return Number(value || 0).toLocaleString('zh-CN');
+            }
+
+            function formatCompact(value) {
+                const number = Number(value || 0);
+                if (number >= 10000) {
+                    const k = number / 1000;
+                    return (Math.round(k * 10) / 10).toString().replace(/\.0$/, '') + 'k';
+                }
+                return formatNumber(number);
+            }
+
+            function applyRate(selector, rate) {
+                const $element = $(selector);
+                $element.removeClass('trend-up trend-down');
+                if (rate === null || rate === undefined || Number.isNaN(Number(rate))) {
+                    $element.text('--').attr('title', '上一周期无数据');
+                    return;
+                }
+                const value = Number(rate);
+                const sign = value > 0 ? '+' : '';
+                $element.text(sign + value.toFixed(1) + '%')
+                    .addClass(value >= 0 ? 'trend-up' : 'trend-down')
+                    .attr('title', '对比上一同期');
+            }
+
+            function displayTime(value) {
+                if (!value) {
+                    return '--:--';
+                }
+                const parts = String(value).split(' ');
+                return parts.length > 1 ? parts[1].slice(0, 5) : '--:--';
+            }
+
+            function renderKpis(data) {
+                $('#totalUsersValue').text(formatNumber(data.totalUsers));
+                $('#totalUsersThisYear').text(formatNumber(data.thisYearNewUsers));
+                $('#weekNewUsersValue').text(formatNumber(data.weekNewUsers));
+                $('#monthNewUsersValue').text(formatNumber(data.monthNewUsers));
+                $('#onlineUsersValue').text(formatNumber(data.onlineUsers));
+                $('#onlineUpdatedAt')
+                    .text(displayTime(data.onlineUpdatedAt))
+                    .attr('title', data.onlineUpdatedAt || '');
+                applyRate('#weekCompare', data.weekCompareRate);
+                applyRate('#monthCompare', data.monthCompareRate);
+                applyRate('#weeklyGrowthCompare', data.weekCompareRate);
+                $('#miniTotalUsers').text(formatCompact(data.totalUsers));
+                $('#miniMonthNewUsers').text(formatCompact(data.monthNewUsers));
+                $('#miniWeekNewUsers').text(formatCompact(data.weekNewUsers));
+                applyRate('#miniWeekCompare', data.weekCompareRate);
+            }
+
+            function renderBar(points) {
+                const list = Array.isArray(points) ? points : [];
+                const labels = list.map(function (item) { return item.label || ''; });
+                const values = list.map(function (item) { return Number(item.value || 0); });
+                barChart.setOption({
+                    animationDuration: 300,
+                    grid: {left: 40, right: 10, top: 10, bottom: 25},
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}<br/>{a}: {c} 人'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: labels,
+                        axisLine: {show: false},
+                        axisTick: {show: false},
+                        axisLabel: {color: '#949eb7'}
+                    },
+                    yAxis: {
+                        type: 'value',
+                        minInterval: 1,
+                        axisLine: {show: false},
+                        axisTick: {show: false},
+                        axisLabel: {color: '#949eb7'},
+                        splitLine: {lineStyle: {type: 'dashed', color: '#e6eaeb'}}
+                    },
+                    series: [{
+                        name: '新增用户',
+                        type: 'bar',
+                        barWidth: 22,
+                        itemStyle: {
+                            color: '#409eff',
+                            borderRadius: [6, 6, 0, 0]
+                        },
+                        data: values
+                    }]
+                }, true);
+                toggleEmpty('#barEmpty', values.every(function (value) { return value === 0; }));
+            }
+
+            function renderLine(points) {
+                const list = Array.isArray(points) ? points : [];
+                const labels = list.map(function (item) { return item.label || ''; });
+                const values = list.map(function (item) { return Number(item.value || 0); });
+                lineChart.setOption({
+                    animationDuration: 300,
+                    grid: {left: 40, right: 15, top: 20, bottom: 30},
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {lineStyle: {color: '#dbdfe1', type: 'dashed'}},
+                        formatter: function (params) {
+                            const item = params && params[0] ? params[0] : null;
+                            return item ? item.name + '<br/>新增用户: ' + item.value + ' 人' : '';
+                        }
+                    },
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: labels,
+                        axisLine: {show: false},
+                        axisTick: {show: false},
+                        axisLabel: {color: '#949eb7'}
+                    },
+                    yAxis: {
+                        type: 'value',
+                        minInterval: 1,
+                        axisLine: {show: false},
+                        axisTick: {show: false},
+                        axisLabel: {color: '#949eb7'},
+                        splitLine: {lineStyle: {type: 'dashed', color: '#e6eaeb'}}
+                    },
+                    series: [{
+                        name: '新增用户',
+                        type: 'line',
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: {color: '#409eff', width: 2},
+                        itemStyle: {color: '#409eff'},
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                {offset: 0, color: 'rgba(64,158,255,.18)'},
+                                {offset: 1, color: 'rgba(64,158,255,.01)'}
+                            ])
+                        },
+                        data: values
+                    }]
+                }, true);
+                toggleEmpty('#lineEmpty', values.every(function (value) { return value === 0; }));
+            }
+
+            function toggleEmpty(selector, isEmpty) {
+                $(selector).toggleClass('is-show', isEmpty);
+            }
+
+            function render(data) {
+                renderKpis(data || {});
+                renderBar(data ? data.userGrowth7d : []);
+                renderLine(data ? data.userGrowth12m : []);
+            }
+
+            function loadDashboard(silent) {
+                if (loading) {
+                    return;
+                }
+                loading = true;
+                if (!silent) {
+                    setState('loading', '正在加载首页数据...');
+                }
+                $.ajax({
+                    type: 'POST',
+                    url: server_url + '/system/dashboard/getDashboard',
+                    headers: {Authorization: token},
+                    contentType: 'application/json',
+                    data: '{}',
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.code === 0) {
+                            render(response.data || {});
+                            setState('hidden');
+                            lastLoadedAt = Date.now();
+                        } else {
+                            setState('error', response.msg || '首页统计加载失败');
+                        }
+                    },
+                    error: function () {
+                        setState('error', '首页统计加载失败，请稍后重试');
+                    },
+                    complete: function () {
+                        loading = false;
+                    }
+                });
+            }
+
+            $('#dashboardRetry').on('click', function () {
+                loadDashboard(false);
+            });
+
+            // 标签页重新可见时刷新，避免停留在旧数据
+            document.addEventListener('visibilitychange', function () {
+                if (!document.hidden && Date.now() - lastLoadedAt > 60000) {
+                    loadDashboard(true);
+                }
+            });
+
+            // 在线人数使用短周期静默刷新，避免页面长时间停留时数据过期
+            setInterval(function () {
+                if (!document.hidden) {
+                    loadDashboard(true);
+                }
+            }, 60000);
+
+            new ResizeObserver(function () {
+                if (barDom.clientWidth > 0) {
+                    barChart.resize();
+                }
+            }).observe(barDom);
+            new ResizeObserver(function () {
+                if (lineDom.clientWidth > 0) {
+                    lineChart.resize();
+                }
+            }).observe(lineDom);
+
+            loadDashboard(false);
+        });
+    </script>
+</body>
+</html>

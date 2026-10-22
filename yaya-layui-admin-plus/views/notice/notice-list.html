@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <title>公告管理</title>
+    <style>
+        .notice-page-head {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 4px 0 12px;
+            flex-wrap: wrap;
+        }
+
+        .notice-page-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--yaya-text-1);
+            line-height: 24px;
+        }
+
+        .notice-page-sub {
+            margin-top: 4px;
+            font-size: 12px;
+            color: var(--yaya-text-4);
+        }
+
+        .notice-admin-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 4px 0 12px;
+        }
+
+        .notice-type-tag {
+            display: inline-block;
+            padding: 1px 7px;
+            border-radius: 9px;
+            font-size: 11px;
+            color: var(--yaya-text-3);
+            background: var(--yaya-gray-200);
+            white-space: nowrap;
+        }
+
+        .notice-title-cell {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .notice-title-cell .notice-title-text {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 500;
+            color: var(--yaya-text-1);
+        }
+
+        .notice-op-group .yaya-btn + .yaya-btn {
+            margin-left: 2px;
+        }
+    </style>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="yaya-panel">
+        <div class="notice-page-head">
+            <div>
+                <div class="notice-page-title">公告管理</div>
+                <div class="notice-page-sub">草稿保存后可发布；已发布公告可以修改内容，但接收范围不可修改</div>
+            </div>
+        </div>
+        <form class="layui-form" onsubmit="return false;">
+            <div class="layui-row">
+                <div class="layui-col-md3 layui-col-sm6 yaya-form-item">
+                    <label class="yaya-form-label">公告标题</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="adminTitle" placeholder="请输入公告标题" autocomplete="off"
+                               class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md2 layui-col-sm6 yaya-form-item">
+                    <label class="yaya-form-label">公告类型</label>
+                    <div class="yaya-input-block">
+                        <select id="adminTypeId">
+                            <option value="">全部</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-col-md2 layui-col-sm6 yaya-form-item">
+                    <label class="yaya-form-label">级别</label>
+                    <div class="yaya-input-block">
+                        <select id="adminLevel">
+                            <option value="">全部</option>
+                            <option value="0">普通</option>
+                            <option value="1">重要</option>
+                            <option value="2">紧急</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-col-md2 layui-col-sm6 yaya-form-item">
+                    <label class="yaya-form-label">状态</label>
+                    <div class="yaya-input-block">
+                        <select id="adminStatus">
+                            <option value="">全部</option>
+                            <option value="0">草稿</option>
+                            <option value="1">已发布</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm6 yaya-form-item">
+                    <div class="yaya-input-block" style="padding-left: 8px;">
+                        <button type="button" id="btnAdminSearch" data-perm="notice:search" class="yaya-btn yaya-primary">搜索</button>
+                        <button type="button" id="btnAdminReset" class="yaya-btn" style="margin-left: 10px;">重置</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="yaya-panel" style="margin-top: 10px; padding-top: 10px;">
+        <div class="notice-admin-toolbar">
+            <div class="notice-page-sub">共 <span id="adminCount">0</span> 条公告</div>
+            <button type="button" id="btnAddNotice" data-perm="notice:add" class="yaya-btn yaya-primary">
+                <i class="layui-icon layui-icon-addition" style="margin-right: 4px;"></i>新增公告
+            </button>
+        </div>
+        <table class="layui-hide" id="table-notice" lay-filter="table-notice"></table>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const table = layui.table;
+        const layer = layui.layer;
+        const form = layui.form;
+
+        const BASE_URL = server_url + '/system/notice';
+        const TABLE_ID = 'table-notice';
+        const PRIMARY = getComputedStyle(document.documentElement)
+            .getPropertyValue('--yaya-primary').trim() || '#409eff';
+        const roleCodes = (Array.isArray(roles) ? roles : []).map(function (role) {
+            return String(role.roleCode || '').toUpperCase();
+        });
+        const isAdmin = is_super === true || roleCodes.includes('OPERATION');
+
+        if (!isAdmin) {
+            location.replace('notice-center.html');
+            return;
+        }
+
+        function escapeHtml(text) {
+            return String(text == null ? '' : text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function levelTag(level) {
+            const value = Number(level);
+            if (value === 2) {
+                return '<span class="yaya-tag yaya-tag-plain-danger is-round tag-small">紧急</span>';
+            }
+            if (value === 1) {
+                return '<span class="yaya-tag yaya-tag-plain-warning is-round tag-small">重要</span>';
+            }
+            return '<span class="yaya-tag yaya-tag-plain-info is-round tag-small">普通</span>';
+        }
+
+        function statusTag(status) {
+            return Number(status) === 1
+                ? '<span class="yaya-tag yaya-tag-plain-success is-round tag-small">已发布</span>'
+                : '<span class="yaya-tag yaya-tag-plain-warning is-round tag-small">草稿</span>';
+        }
+
+        function scopeText(scope) {
+            const map = {1: '全员', 2: '指定部门', 3: '指定用户'};
+            return map[Number(scope)] || '-';
+        }
+
+        function loadNoticeTypes(callback) {
+            $.ajax({
+                url: server_url + '/system/noticeType/getNoticeTypeList',
+                method: 'POST',
+                headers: {Authorization: token},
+                dataType: 'json',
+                success: function (resp) {
+                    let options = '<option value="">全部</option>';
+                    if (resp.code === 0) {
+                        (resp.data || []).forEach(function (type) {
+                            const disabled = Number(type.status) !== 1;
+                            options += '<option value="' + escapeHtml(type.noticeTypeId) + '">'
+                                + escapeHtml(type.noticeTypeName) + (disabled ? '（停用）' : '') + '</option>';
+                        });
+                    } else {
+                        layer.msg(resp.msg);
+                    }
+                    $('#adminTypeId').html(options);
+                    form.render('select');
+                    if (callback) callback();
+                },
+                error: function () {
+                    layer.msg('公告类型加载失败');
+                    if (callback) callback();
+                }
+            });
+        }
+
+        function buildAdminWhere() {
+            const where = {};
+            const title = $.trim($('#adminTitle').val());
+            const typeId = $('#adminTypeId').val();
+            const level = $('#adminLevel').val();
+            const status = $('#adminStatus').val();
+            if (title) {
+                where.noticeTitle = title;
+            }
+            if (typeId !== '') {
+                where.noticeTypeId = typeId;
+            }
+            if (level !== '') {
+                where.noticeLevel = Number(level);
+            }
+            if (status !== '') {
+                where.status = Number(status);
+            }
+            return where;
+        }
+
+        function adminTitleCell(row) {
+            let html = '<div class="notice-title-cell">';
+            if (Number(row.isTop) === 1) {
+                html += '<span class="yaya-tag yaya-tag-plain-primary is-round tag-small">置顶</span>';
+            }
+            html += '<span class="notice-title-text" title="' + escapeHtml(row.noticeTitle) + '">'
+                + escapeHtml(row.noticeTitle) + '</span></div>';
+            return html;
+        }
+
+        function adminOpsCell(row) {
+            const status = Number(row.status);
+            const actions = [{text: '编辑', event: 'edit', perm: 'notice:update'}];
+            if (status === 0) {
+                actions.push({
+                    text: '发布', event: 'publish', perm: 'notice:publish',
+                    className: 'yaya-btn is-link-success yaya-btn-small'
+                });
+            }
+            actions.push(
+                {text: '详情', event: 'detail', perm: 'notice:search'},
+                {
+                    text: Number(row.isTop) === 1 ? '取消置顶' : '置顶',
+                    event: 'top',
+                    perm: 'notice:top',
+                    className: 'yaya-btn is-link-warning yaya-btn-small'
+                },
+                {
+                    text: '删除', event: 'delete', perm: 'notice:del',
+                    className: 'yaya-btn is-link-danger yaya-btn-small'
+                }
+            );
+            return window.yaya_permission_actions(actions);
+        }
+
+        function renderAdminTable() {
+            table.render({
+                elem: '#table-notice',
+                id: TABLE_ID,
+                url: BASE_URL + '/getNoticePage',
+                method: 'post',
+                headers: {Authorization: token},
+                contentType: 'application/json',
+                request: {pageName: 'pageNum', limitName: 'pageSize'},
+                where: buildAdminWhere(),
+                parseData: function (res) {
+                    const total = (res.data && res.data.total) || 0;
+                    $('#adminCount').text(total);
+                    return {
+                        code: res.code,
+                        msg: res.msg,
+                        count: total,
+                        data: (res.data && res.data.records) || []
+                    };
+                },
+                skin: 'line',
+                page: {prev: '上一页', next: '下一页', theme: PRIMARY},
+                limit: 10,
+                limits: [10, 20, 50],
+                defaultToolbar: [],
+                cols: [[
+                    {field: 'noticeId', title: '公告ID', fixed: 'left', width: 190},
+                    {title: '公告标题', minWidth: 240, templet: adminTitleCell},
+                    {
+                        field: 'noticeTypeName',
+                        title: '类型',
+                        width: 120,
+                        templet: function (row) {
+                            return '<span class="notice-type-tag">'
+                                + escapeHtml(row.noticeTypeName || '-') + '</span>';
+                        }
+                    },
+                    {
+                        title: '级别',
+                        width: 82,
+                        align: 'center',
+                        templet: function (row) {
+                            return levelTag(row.noticeLevel);
+                        }
+                    },
+                    {
+                        title: '范围',
+                        width: 100,
+                        align: 'center',
+                        templet: function (row) {
+                            return scopeText(row.publishScope);
+                        }
+                    },
+                    {
+                        title: '状态',
+                        width: 88,
+                        align: 'center',
+                        templet: function (row) {
+                            return statusTag(row.status);
+                        }
+                    },
+                    {
+                        field: 'publishTime',
+                        title: '发布时间',
+                        width: 170,
+                        templet: function (row) {
+                            return row.publishTime || '<span style="color:var(--yaya-text-4)">-</span>';
+                        }
+                    },
+                    {
+                        field: 'createByName',
+                        title: '创建人',
+                        width: 100,
+                        templet: function (row) {
+                            return escapeHtml(row.createByName) || '-';
+                        }
+                    },
+                    {title: '操作', fixed: 'right', width: 310, templet: adminOpsCell}
+                ]]
+            });
+        }
+
+        function reloadAdminTable() {
+            table.reload(TABLE_ID, {
+                where: buildAdminWhere(),
+                page: {curr: 1, prev: '上一页', next: '下一页', theme: PRIMARY}
+            });
+        }
+
+        function openDetail(noticeId) {
+            layer.open({
+                type: 2,
+                title: '公告详情',
+                area: ['780px', '88%'],
+                shadeClose: true,
+                content: 'notice-detail.html?noticeId=' + encodeURIComponent(noticeId),
+                end: reloadAdminTable
+            });
+        }
+
+        function openNoticeForm(noticeId) {
+            const content = noticeId
+                ? 'notice-edit.html?noticeId=' + encodeURIComponent(noticeId)
+                : 'notice-add.html';
+            layer.open({
+                type: 2,
+                title: noticeId ? '编辑公告' : '新增公告',
+                area: ['920px', '92%'],
+                shadeClose: false,
+                content: content,
+                end: reloadAdminTable
+            });
+        }
+
+        function publishNotice(row) {
+            layer.confirm('确定发布公告「' + escapeHtml(row.noticeTitle) + '」吗？发布后将生成接收记录。', {
+                title: '提示',
+                btn: ['确定发布', '取消']
+            }, function (index) {
+                layer.close(index);
+                $.ajax({
+                    url: BASE_URL + '/publishNotice',
+                    method: 'POST',
+                    headers: {Authorization: token},
+                    data: {noticeId: row.noticeId},
+                    dataType: 'json',
+                    success: function (resp) {
+                        layer.msg(resp.msg);
+                        if (resp.code === 0) {
+                            reloadAdminTable();
+                        }
+                    },
+                    error: function () {
+                        layer.msg('请求失败，请稍后重试');
+                    }
+                });
+            });
+        }
+
+        function toggleTop(row) {
+            const target = Number(row.isTop) === 1 ? 0 : 1;
+            layer.confirm('确定' + (target === 1 ? '置顶' : '取消置顶') + '公告「'
+                + escapeHtml(row.noticeTitle) + '」吗？', {title: '提示'}, function (index) {
+                layer.close(index);
+                $.ajax({
+                    url: BASE_URL + '/updateNoticeTop',
+                    method: 'POST',
+                    headers: {Authorization: token},
+                    data: {noticeId: row.noticeId, isTop: target},
+                    dataType: 'json',
+                    success: function (resp) {
+                        layer.msg(resp.msg);
+                        if (resp.code === 0) {
+                            reloadAdminTable();
+                        }
+                    },
+                    error: function () {
+                        layer.msg('请求失败，请稍后重试');
+                    }
+                });
+            });
+        }
+
+        function deleteNotice(row) {
+            layer.confirm('确定删除公告「' + escapeHtml(row.noticeTitle) + '」吗？公告将被逻辑删除。', {
+                title: '提示',
+                btn: ['确定删除', '取消']
+            }, function (index) {
+                layer.close(index);
+                $.ajax({
+                    url: BASE_URL + '/deleteNotice',
+                    method: 'POST',
+                    headers: {Authorization: token},
+                    data: {noticeId: row.noticeId},
+                    dataType: 'json',
+                    success: function (resp) {
+                        layer.msg(resp.msg);
+                        if (resp.code === 0) {
+                            reloadAdminTable();
+                        }
+                    },
+                    error: function () {
+                        layer.msg('请求失败，请稍后重试');
+                    }
+                });
+            });
+        }
+
+        $('#btnAddNotice').on('click', function () {
+            openNoticeForm();
+        });
+        $('#btnAdminSearch').on('click', reloadAdminTable);
+        $('#btnAdminReset').on('click', function () {
+            $('#adminTitle').val('');
+            $('#adminTypeId').val('');
+            $('#adminLevel').val('');
+            $('#adminStatus').val('');
+            form.render('select');
+            reloadAdminTable();
+        });
+        table.on('tool(' + TABLE_ID + ')', function (obj) {
+            const row = obj.data;
+            if (obj.event === 'edit') {
+                openNoticeForm(row.noticeId);
+            } else if (obj.event === 'publish') {
+                publishNotice(row);
+            } else if (obj.event === 'detail') {
+                openDetail(row.noticeId);
+            } else if (obj.event === 'top') {
+                toggleTop(row);
+            } else if (obj.event === 'delete') {
+                deleteNotice(row);
+            }
+        });
+
+        loadNoticeTypes(renderAdminTable);
+    });
+</script>
+</body>
+</html>

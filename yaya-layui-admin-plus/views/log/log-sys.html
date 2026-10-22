@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <title>系统日志</title>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="yaya-panel">
+        <form class="layui-form" style="padding: 10px 0" onsubmit="return false;">
+            <div class="layui-row">
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">操作人</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="operName" placeholder="操作人昵称" autocomplete="off" class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">账号</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="username" placeholder="用户账号" autocomplete="off" class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md2 layui-col-sm2 yaya-form-item">
+                    <label class="yaya-form-label">状态</label>
+                    <div class="yaya-input-block">
+                        <select id="status">
+                            <option value="">全部</option>
+                            <option value="1">成功</option>
+                            <option value="0">失败</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-col-md4 layui-col-sm4 yaya-form-item">
+                    <label class="yaya-form-label">操作时间</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="timeRange" placeholder="开始时间 - 结束时间" autocomplete="off" readonly class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+            </div>
+            <div class="layui-row">
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <button type="button" id="btnSearch" data-perm="sysLog:search" class="yaya-btn yaya-primary">搜索</button>
+                    <button type="button" id="btnReset" class="yaya-btn" style="margin-left: 10px;">重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="yaya-panel" style="margin-top: 10px;">
+        <div style="display: flex;flex-direction: row;justify-content: flex-end;padding: 10px;">
+            <button id="btnClear" data-role-any="ROOT,OPERATION" type="button" class="yaya-btn yaya-danger">清空全部日志</button>
+        </div>
+        <table class="layui-hide" id="table-sys-log" lay-filter="table-sys-log"></table>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const table = layui.table;
+        const layer = layui.layer;
+        const form = layui.form;
+        const laydate = layui.laydate;
+
+        const TABLE_ID = 'table-sys-log';
+
+        laydate.render({
+            elem: '#timeRange',
+            type: 'datetime',
+            range: true,
+            theme: getComputedStyle(document.documentElement).getPropertyValue('--yaya-primary').trim() || '#409eff'
+        });
+
+        function buildWhere() {
+            const where = {logType: 2};
+            const operName = $.trim($('#operName').val());
+            const username = $.trim($('#username').val());
+            const status = $('#status').val();
+            if (operName) {
+                where.operName = operName;
+            }
+            if (username) {
+                where.username = username;
+            }
+            if (status !== '') {
+                where.status = Number(status);
+            }
+            const range = $.trim($('#timeRange').val());
+            if (range) {
+                const parts = range.split(' - ');
+                if (parts.length === 2) {
+                    where.startTime = parts[0];
+                    where.endTime = parts[1];
+                }
+            }
+            return where;
+        }
+
+        function reloadTable() {
+            table.reload(TABLE_ID, {
+                where: buildWhere(),
+                page: {
+                    curr: 1,
+                    prev: '上一页',
+                    next: '下一页',
+                    theme: '#409eff'
+                }
+            });
+        }
+
+        table.render({
+            elem: '#table-sys-log',
+            id: TABLE_ID,
+            url: server_url + '/system/sysLog/getSysLogPage',
+            method: 'post',
+            headers: {
+                Authorization: token
+            },
+            contentType: 'application/json',
+            request: {
+                pageName: 'pageNum',
+                limitName: 'pageSize'
+            },
+            where: buildWhere(),
+            parseData: function (res) {
+                return {
+                    code: res.code,
+                    msg: res.msg,
+                    count: (res.data && res.data.total) || 0,
+                    data: (res.data && res.data.records) || []
+                };
+            },
+            skin: 'line',
+            page: {
+                prev: '上一页',
+                next: '下一页',
+                theme: '#409eff'
+            },
+            limit: 10,
+            limits: [10, 20, 50, 100],
+            defaultToolbar: [],
+            cols: [[
+                {field: 'logId', title: '日志ID', fixed: 'left', width: 185},
+                {field: 'businessName', title: '业务模块', width: 160},
+                {field: 'operName', title: '操作人', width: 100},
+                {field: 'username', title: '账号', width: 110},
+                {field: 'requestUrl', title: '请求地址', minWidth: 200},
+                {field: 'executionTime', title: '耗时(ms)', width: 90, align: 'center'},
+                {
+                    title: '状态',
+                    width: 70,
+                    align: 'center',
+                    templet: function (row) {
+                        if (Number(row.status) === 1) {
+                            return '<span class="yaya-tag yaya-tag-plain-success is-round tag-small">成功</span>';
+                        }
+                        return '<span class="yaya-tag yaya-tag-plain-danger is-round tag-small">失败</span>';
+                    }
+                },
+                {field: 'ip', title: 'IP', width: 115},
+                {field: 'operTime', title: '操作时间', width: 170},
+                {
+                    title: '操作',
+                    fixed: 'right',
+                    width: 80,
+                    templet: function () {
+                        return window.yaya_permission_actions([
+                            {text: '详情', event: 'detail', perm: 'sysLog:search'}
+                        ]);
+                    }
+                }
+            ]]
+        });
+
+        function openDetail(row) {
+            layer.open({
+                type: 2,
+                title: '日志详情',
+                area: ['820px', '80%'],
+                shadeClose: true,
+                content: 'log-sys-detail.html?logId=' + encodeURIComponent(row.logId)
+            });
+        }
+
+        // 清空日志: 仅ROOT和运营管理员可见(后端 @PreAuthorize 同样校验)
+        const canClearLog = is_super || roles.some(function (role) {
+            return String(role.roleCode || '').toUpperCase() === 'OPERATION';
+        });
+        if (!canClearLog) {
+            $('#btnClear').hide();
+        }
+        $('#btnClear').on('click', function () {
+            layer.confirm('确定清空全部日志吗？系统日志和登录日志都会被清除，且无法恢复。', {
+                title: '提示'
+            }, function (index) {
+                layer.close(index);
+                const loading = layer.load(0);
+                $.ajax({
+                    url: server_url + '/system/sysLog/clearSysLog',
+                    method: 'POST',
+                    headers: {
+                        Authorization: token
+                    },
+                    dataType: 'json',
+                    success: function (resp) {
+                        layer.close(loading);
+                        layer.msg(resp.code === 0 ? ('已清空 ' + resp.data + ' 条日志') : resp.msg);
+                        if (resp.code === 0) {
+                            reloadTable();
+                        }
+                    },
+                    error: function () {
+                        layer.close(loading);
+                        layer.msg('请求失败，请稍后重试');
+                    }
+                });
+            });
+        });
+
+        $('#btnSearch').on('click', reloadTable);
+        $('#btnReset').on('click', function () {
+            $('#operName').val('');
+            $('#username').val('');
+            $('#status').val('');
+            $('#timeRange').val('');
+            form.render('select');
+            reloadTable();
+        });
+
+        table.on('tool(' + TABLE_ID + ')', function (obj) {
+            if (obj.event === 'detail') {
+                openDetail(obj.data);
+            }
+        });
+    });
+</script>
+</body>
+</html>

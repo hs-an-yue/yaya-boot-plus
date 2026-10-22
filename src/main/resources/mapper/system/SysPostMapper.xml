@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yaya.system.mapper.SysPostMapper">
+
+    <!--
+        自定义 SQL 统一写在本文件(接口中不允许写注解 SQL)
+        继承 BaseMapper 提供的通用方法无需在此声明
+    -->
+
+    <sql id="postVoColumns">
+        p.post_id,
+        p.post_name,
+        p.post_code,
+        p.dept_id,
+        d.dept_name,
+        p.status,
+        p.remark,
+        p.create_by,
+        u.nickname AS create_by_name,
+        p.create_time,
+        p.update_time,
+        (SELECT COUNT(*)
+         FROM sys_user_post up
+         INNER JOIN sys_user us ON us.user_id = up.user_id AND us.is_deleted = 0
+         WHERE up.post_id = p.post_id) AS user_count
+    </sql>
+
+    <select id="getPostPage" resultType="com.yaya.system.domain.vo.SysPostVo">
+        SELECT
+        <include refid="postVoColumns"/>
+        FROM sys_post p
+        LEFT JOIN sys_dept d ON d.dept_id = p.dept_id
+        LEFT JOIN sys_user u ON u.user_id = p.create_by
+        <where>
+            p.is_deleted = 0
+            <if test="postName != null and postName != ''">
+                AND p.post_name LIKE CONCAT('%', #{postName}, '%')
+            </if>
+            <if test="postCode != null and postCode != ''">
+                AND p.post_code LIKE CONCAT('%', #{postCode}, '%')
+            </if>
+            <if test="status != null">
+                AND p.status = #{status}
+            </if>
+            <if test="deptId != null">
+                AND p.dept_id = #{deptId}
+            </if>
+        </where>
+        ORDER BY p.create_time DESC, p.post_id DESC
+    </select>
+
+    <select id="getPostDetail" resultType="com.yaya.system.domain.vo.SysPostVo">
+        SELECT
+        <include refid="postVoColumns"/>
+        FROM sys_post p
+        LEFT JOIN sys_dept d ON d.dept_id = p.dept_id
+        LEFT JOIN sys_user u ON u.user_id = p.create_by
+        WHERE p.post_id = #{postId}
+          AND p.is_deleted = 0
+    </select>
+
+    <select id="countByPostCode" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_post
+        WHERE post_code = #{postCode}
+        <if test="excludePostId != null">
+            AND post_id != #{excludePostId}
+        </if>
+    </select>
+
+    <select id="countActiveUsers" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_user_post up
+        INNER JOIN sys_user us ON us.user_id = up.user_id AND us.is_deleted = 0
+        WHERE up.post_id = #{postId}
+    </select>
+
+    <update id="logicDeleteById">
+        UPDATE sys_post
+        SET is_deleted = 1,
+            update_by = #{updateBy},
+            update_time = #{updateTime}
+        WHERE post_id = #{postId}
+          AND is_deleted = 0
+    </update>
+
+</mapper>

@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YaYa Admin - 登录</title>
+    <!-- Layui CSS -->
+    <link rel="stylesheet" href="layui/css/layui.css">
+    <style>
+        /* ======================== 主题变量 ======================== */
+        :root {
+            /* 默认主题：科技蓝 */
+            --theme-primary: #1890ff;
+            --theme-primary-dark: #096dd9;
+            --theme-primary-darker: #0050b3;
+            --theme-primary-rgb: 24, 144, 255;
+            --theme-primary-light-bg: #e6f7ff;
+            --theme-primary-light-bg2: #bae7ff;
+            --theme-gradient: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 50%, var(--theme-primary-darker) 100%);
+        }
+
+        /* 翡翠绿主题 */
+        [data-theme="blue"] {
+            --theme-primary: #16b777;
+            --theme-primary-dark: #0e9a62;
+            --theme-primary-darker: #0a7d4e;
+            --theme-primary-rgb: 22, 183, 119;
+            --theme-primary-light-bg: #e8f5e9;
+            --theme-primary-light-bg2: #c8e6c9;
+            --theme-gradient: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 50%, var(--theme-primary-darker) 100%);
+        }
+
+        /* ======================== 基础重置 ======================== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+            min-height: 100vh;
+            background: #f0f2f5;
+        }
+
+        /* ======================== 主容器 ======================== */
+        .login-wrapper {
+            display: flex;
+            min-height: 100vh;
+            width: 100%;
+        }
+
+        /* ======================== 左侧品牌区 ======================== */
+        .login-brand {
+            flex: 1;
+            background: var(--theme-gradient);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            min-width: 0;
+            transition: background 0.4s ease;
+        }
+
+        .login-brand::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(255,255,255,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 60% 80%, rgba(255,255,255,0.04) 0%, transparent 50%);
+            animation: bgFloat 20s ease-in-out infinite;
+        }
+
+        @keyframes bgFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(2%, -1%) rotate(1deg); }
+            66% { transform: translate(-1%, 2%) rotate(-1deg); }
+        }
+
+        .brand-decor {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            animation: decorFloat 15s ease-in-out infinite;
+        }
+        .brand-decor:nth-child(1) { width: 300px; height: 300px; top: -80px; left: -80px; animation-delay: 0s; }
+        .brand-decor:nth-child(2) { width: 200px; height: 200px; bottom: -60px; right: -40px; animation-delay: -5s; }
+        .brand-decor:nth-child(3) { width: 150px; height: 150px; top: 40%; right: 10%; animation-delay: -10s; }
+        .brand-decor:nth-child(4) { width: 80px; height: 80px; bottom: 20%; left: 15%; animation-delay: -7s; }
+
+        @keyframes decorFloat {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-20px) scale(1.05); }
+        }
+
+        .brand-content {
+            position: relative; z-index: 2;
+            text-align: center; color: #fff; padding: 40px;
+        }
+
+        .brand-logo {
+            width: 80px; height: 80px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 24px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            font-size: 36px; font-weight: 700; letter-spacing: -2px;
+        }
+
+        .brand-title {
+            font-size: 32px; font-weight: 700;
+            margin-bottom: 12px; letter-spacing: 2px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .brand-subtitle {
+            font-size: 15px; opacity: 0.85;
+            line-height: 1.8; max-width: 320px; margin: 0 auto;
+        }
+
+        .brand-features {
+            margin-top: 48px;
+            display: flex; flex-direction: column; gap: 16px;
+        }
+
+        .brand-feature {
+            display: flex; align-items: center; gap: 12px;
+            font-size: 14px; opacity: 0.9;
+        }
+
+        .brand-feature i {
+            width: 32px; height: 32px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0;
+        }
+
+        /* ======================== 右侧表单区 ======================== */
+        .login-form-area {
+            width: 520px; min-width: 420px;
+            background: #fff;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 40px;
+            position: relative;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.05);
+            overflow-y: auto;
+        }
+
+        /* 主题切换按钮 */
+        .theme-switcher {
+            position: absolute;
+            top: 20px; right: 20px;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: 1.5px solid #e8e8e8;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 18px; color: #999;
+            background: #fff;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+        .theme-switcher:hover {
+            border-color: var(--theme-primary);
+            color: var(--theme-primary);
+            transform: rotate(30deg);
+        }
+
+        .form-container {
+            width: 100%; max-width: 380px;
+            margin: auto 0;
+        }
+
+        /* 欢迎语 */
+        .form-welcome { margin-bottom: 32px; }
+        .form-welcome h2 { font-size: 24px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; }
+        .form-welcome p { font-size: 14px; color: #999; }
+
+        /* 面板切换 */
+        .form-panel { display: none; }
+        .form-panel.active { display: block; animation: fadeSlideIn 0.4s ease; }
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ======================== 表单样式 ======================== */
+        .form-group { margin-bottom: 22px; position: relative; }
+        .form-group label { display: block; font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 500; }
+
+        .input-wrapper { position: relative; display: flex; align-items: center; }
+        .input-wrapper .input-icon {
+            position: absolute; left: 14px; color: #bbb;
+            font-size: 18px; z-index: 1; transition: color 0.3s;
+        }
+        .input-wrapper input {
+            width: 100%; height: 46px;
+            border: 1.5px solid #e8e8e8; border-radius: 10px;
+            padding: 0 14px 0 44px; font-size: 14px; color: #333;
+            background: #fafafa; transition: all 0.3s ease; outline: none;
+        }
+        .input-wrapper input:focus {
+            border-color: var(--theme-primary); background: #fff;
+            box-shadow: 0 0 0 3px rgba(var(--theme-primary-rgb), 0.1);
+        }
+        .input-wrapper input:focus ~ .input-icon,
+        .input-wrapper input:focus + .input-icon { color: var(--theme-primary); }
+        .input-wrapper input::placeholder { color: #c0c0c0; }
+
+        .pwd-toggle {
+            position: absolute; right: 14px; color: #bbb;
+            cursor: pointer; font-size: 18px; transition: color 0.3s; z-index: 1;
+        }
+        .pwd-toggle:hover { color: var(--theme-primary); }
+
+        .captcha-row { display: flex; gap: 12px; }
+        .captcha-row .input-wrapper { flex: 1; }
+
+        .form-options {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 28px; margin-top: -4px;
+        }
+        .remember-me { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #888; cursor: pointer; }
+        .remember-me input[type="checkbox"] {
+            appearance: none; -webkit-appearance: none;
+            width: 16px; height: 16px; border: 1.5px solid #d9d9d9;
+            border-radius: 4px; cursor: pointer; position: relative; transition: all 0.2s;
+        }
+        .remember-me input[type="checkbox"]:checked { background: var(--theme-primary); border-color: var(--theme-primary); }
+        .remember-me input[type="checkbox"]:checked::after {
+            content: '✓'; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); color: #fff; font-size: 11px; font-weight: 700;
+        }
+        /* LayUI 渲染后的复选框：选中背景与悬停边框跟随登录页主题 */
+        .remember-me .layui-form-checkbox[lay-skin="primary"] > i {
+            transition: none;
+        }
+        .remember-me .layui-form-checkbox[lay-skin="primary"]:hover > i {
+            border-color: var(--theme-primary);
+        }
+        .remember-me .layui-form-checked[lay-skin="primary"] > i {
+            border-color: var(--theme-primary) !important;
+            background-color: var(--theme-primary);
+            color: #fff;
+        }
+
+        /* 按钮 */
+        .btn-submit {
+            width: 100%; height: 48px;
+            background: var(--theme-gradient);
+            color: #fff; border: none; border-radius: 10px;
+            font-size: 16px; font-weight: 600; cursor: pointer;
+            transition: all 0.3s ease; letter-spacing: 4px;
+            position: relative; overflow: hidden;
+        }
+        .btn-submit::before {
+            content: ''; position: absolute; top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(var(--theme-primary-rgb), 0.4); }
+        .btn-submit:hover::before { left: 100%; }
+        .btn-submit:active { transform: translateY(0); }
+
+        .divider { display: flex; align-items: center; margin: 28px 0; color: #ccc; font-size: 12px; }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #eee; }
+        .divider span { padding: 0 16px; color: #bbb; }
+
+        .third-party { display: flex; justify-content: center; gap: 20px; }
+        .third-party-btn {
+            width: 44px; height: 44px; border-radius: 50%;
+            border: 1.5px solid #e8e8e8;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.3s;
+            font-size: 20px; color: #999; background: #fff;
+        }
+        .third-party-btn:hover {
+            border-color: var(--theme-primary); color: var(--theme-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(var(--theme-primary-rgb), 0.15);
+        }
+        /* 平台品牌色保持不变 */
+        .third-party-btn.wechat:hover { border-color: #07c160; color: #07c160; }
+        .third-party-btn.qq:hover { border-color: #12b7f5; color: #12b7f5; }
+        .third-party-btn.weibo:hover { border-color: #e6162d; color: #e6162d; }
+        .third-party-btn.github:hover { border-color: #24292e; color: #24292e; }
+
+        .form-footer { margin-top: auto; padding-top: 24px; text-align: center; font-size: 12px; color: #bbb; flex-shrink: 0; }
+        .form-footer a { color: #999; text-decoration: none; }
+        .form-footer a:hover { color: var(--theme-primary); }
+
+        .btn-submit.loading { pointer-events: none; opacity: 0.8; }
+        .btn-submit.loading::after {
+            content: ''; display: inline-block; width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+            border-radius: 50%; animation: spin 0.6s linear infinite;
+            margin-left: 8px; vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ======================== 响应式 ======================== */
+        @media (max-width: 1199px) {
+            .login-wrapper { flex-direction: column; }
+            .login-brand { flex: none; height: 220px; min-height: 220px; padding: 24px; }
+            .brand-content { padding: 16px; }
+            .brand-logo { width: 52px; height: 52px; font-size: 24px; border-radius: 14px; margin-bottom: 12px; }
+            .brand-title { font-size: 22px; margin-bottom: 6px; }
+            .brand-subtitle { font-size: 13px; line-height: 1.6; }
+            .brand-features { display: none; }
+            .brand-decor:nth-child(1) { width: 180px; height: 180px; }
+            .brand-decor:nth-child(2) { width: 120px; height: 120px; }
+            .brand-decor:nth-child(3) { width: 80px; height: 80px; }
+            .brand-decor:nth-child(4) { display: none; }
+            .login-form-area { width: 100%; min-width: unset; flex: 1; padding: 32px 24px; }
+            .form-container { max-width: 420px; }
+        }
+
+        @media (max-width: 767px) {
+            html, body { background: #fff; }
+            .login-wrapper { flex-direction: column; }
+            .login-brand { flex: none; height: 6px; min-height: 6px; overflow: hidden; }
+            .brand-content, .brand-decor { display: none; }
+            .login-form-area { width: 100%; min-width: unset; flex: 1; padding: 24px 20px; box-shadow: none; }
+            .form-container { max-width: 100%; }
+            .form-welcome h2 { font-size: 20px; }
+            .form-welcome p { font-size: 13px; }
+            .input-wrapper input { height: 44px; font-size: 16px; }
+            .captcha-img { height: 40px; min-width: 120px; font-size: 18px; letter-spacing: 6px;}
+            .btn-submit { height: 46px; font-size: 15px; }
+            .third-party-btn { width: 40px; height: 40px; font-size: 18px; }
+            .divider { margin: 20px 0; }
+            .form-footer { padding-top: 16px; font-size: 11px; }
+            .theme-switcher { top: 16px; right: 16px; width: 32px; height: 32px; font-size: 16px; }
+        }
+
+        @media (max-width: 374px) {
+            .login-form-area { padding: 20px 16px; }
+            .form-welcome h2 { font-size: 18px; }
+            .captcha-row { gap: 8px; }
+            .captcha-img { min-width: 120px; letter-spacing: 4px; font-size: 16px; }
+            .third-party { gap: 14px; }
+            .third-party-btn { width: 36px; height: 36px; font-size: 16px; }
+        }
+
+        @media (min-width: 1600px) {
+            .login-form-area { width: 580px; }
+            .form-container { max-width: 420px; }
+            .brand-title { font-size: 36px; }
+            .brand-subtitle { font-size: 16px; }
+        }
+
+        @media (max-height: 500px) and (orientation: landscape) {
+            .login-wrapper { flex-direction: row; }
+            .login-brand { display: none; }
+            .login-form-area { width: 100%; min-width: unset; padding: 16px 24px; }
+            .form-container { max-width: 480px; }
+            .form-welcome { margin-bottom: 16px; }
+            .form-group { margin-bottom: 14px; }
+            .form-options { margin-bottom: 16px; }
+            .divider { margin: 14px 0; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-wrapper">
+        <!-- 左侧品牌区 -->
+        <div class="login-brand">
+            <div class="brand-decor"></div>
+            <div class="brand-decor"></div>
+            <div class="brand-decor"></div>
+            <div class="brand-decor"></div>
+            <div class="brand-content">
+                <div class="brand-logo">Y</div>
+                <h1 class="brand-title">YaYa Admin</h1>
+                <p class="brand-subtitle">基于 Layui 的现代化后台管理系统<br>开箱即用，高效开发</p>
+                <div class="brand-features">
+                    <div class="brand-feature"><i class="layui-icon layui-icon-ok-circle"></i><span>丰富的组件库，开箱即用</span></div>
+                    <div class="brand-feature"><i class="layui-icon layui-icon-ok-circle"></i><span>完善的权限管理体系</span></div>
+                    <div class="brand-feature"><i class="layui-icon layui-icon-ok-circle"></i><span>AI智能化，操作方便</span></div>
+                    <div class="brand-feature"><i class="layui-icon layui-icon-ok-circle"></i><span>持续更新，社区活跃</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧表单区 -->
+        <div class="login-form-area">
+            <!-- 主题切换按钮 -->
+            <div class="theme-switcher" id="themeSwitcher" title="切换主题色">
+                <i class="layui-icon layui-icon-theme"></i>
+            </div>
+
+            <div class="form-container">
+                <!-- 登录面板 -->
+                <div class="form-panel active" id="panel-login">
+                    <div class="form-welcome">
+                        <h2>👋 欢迎回来</h2>
+                        <p>请输入您的账号信息以登录系统</p>
+                    </div>
+                    <form id="loginForm" class="layui-form">
+                        <!-- 验证码 uuid，必须随登录参数一起提交 -->
+                        <input type="hidden" name="uuid" id="uuid">
+                        <div class="form-group">
+                            <label>用户名</label>
+                            <div class="input-wrapper">
+                                <i class="layui-icon layui-icon-username input-icon"></i>
+                                <input type="text" name="username" id="loginUsername" placeholder="请输入用户名" autocomplete="username">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>密码</label>
+                            <div class="input-wrapper">
+                                <i class="layui-icon layui-icon-password input-icon"></i>
+                                <input type="password" name="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password">
+                                <i class="layui-icon layui-icon-eye pwd-toggle" id="loginPwdToggle"></i>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>验证码</label>
+                            <div class="captcha-row">
+                                <div class="input-wrapper">
+                                    <i class="layui-icon layui-icon-vercode input-icon"></i>
+                                    <input type="text" name="captcha" id="loginCaptcha" placeholder="请输入验证码" maxlength="4">
+                                </div>
+                                <div class="captcha-img" id="captchaImg" title="点击刷新验证码">
+                                    <img style="cursor: pointer;" id="captcha" src="image/captcha.gif" alt="captcha">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-options">
+                            <label class="remember-me">
+                                <input type="checkbox" id="rememberMe">
+                                <span>记住密码</span>
+                            </label>
+                        </div>
+                        <button type="submit" class="btn-submit" id="loginBtn" lay-submit lay-filter="login">登 录</button>
+                    </form>
+                    <div class="divider"><span>其他登录方式</span></div>
+                    <div class="third-party">
+                        <div class="third-party-btn wechat" title="微信登录"><i class="layui-icon layui-icon-login-wechat"></i></div>
+                        <div class="third-party-btn qq" title="QQ登录"><i class="layui-icon layui-icon-login-qq"></i></div>
+                        <div class="third-party-btn weibo" title="微博登录"><i class="layui-icon layui-icon-login-weibo"></i></div>
+                        <div class="third-party-btn github" title="GitHub登录">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="form-footer">
+                Copyright © 2026 <a href="javascript:;">YaYa Admin Plus</a> · Powered by Layui
+            </div>
+        </div>
+    </div>
+
+    <!-- Layui JS -->
+    <script src="layui/layui.js"></script>
+    <!-- 引入公共http文件 -->
+    <script src="./js/server.js"></script>
+    <script>
+        // ======================== 主题切换 ========================
+        (function () {
+            const switcher = document.getElementById('themeSwitcher');
+            const STORAGE_KEY = 'yaya_admin_theme';
+            const savedTheme = localStorage.getItem(STORAGE_KEY);
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            }
+            switcher.addEventListener('click', function () {
+                const current = document.documentElement.getAttribute('data-theme');
+                const next = current === 'blue' ? '' : 'blue';
+
+                if (next) {
+                    document.documentElement.setAttribute('data-theme', next);
+                } else {
+                    document.documentElement.removeAttribute('data-theme');
+                }
+
+                localStorage.setItem(STORAGE_KEY, next);
+
+                this.style.transform = 'rotate(180deg)';
+                setTimeout(() => { this.style.transform = ''; }, 300);
+            });
+        })();
+
+        // ======================== 密码可见切换 ========================
+        function togglePwd(inputId, toggleId) {
+            const input = document.getElementById(inputId);
+            const toggle = document.getElementById(toggleId);
+            toggle.addEventListener('click', function () {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    this.classList.replace('layui-icon-eye', 'layui-icon-eye-invisible');
+                } else {
+                    input.type = 'password';
+                    this.classList.replace('layui-icon-eye-invisible', 'layui-icon-eye');
+                }
+            });
+        }
+        togglePwd('loginPassword', 'loginPwdToggle');
+
+        // ======================== 表单提交 ========================
+        layui.use( function () {
+            const form = layui.form;
+            const layer = layui.layer;
+            const $ = layui.$;
+
+            // ======================== 记住密码 ========================
+            // 密码不明文落盘: 使用 IndexedDB 中不可导出的 AES-GCM key 加密后存入 localStorage
+            const REMEMBER_STORAGE_KEY = 'yaya_login_remember_v1';
+            const REMEMBER_DB_NAME = 'yaya_login_secrets';
+            const REMEMBER_DB_STORE = 'keys';
+            const REMEMBER_DB_KEY = 'remember-key';
+            let rememberKeyPromise = null;
+
+            function bytesToBase64(bytes) {
+                let binary = '';
+                const chunk = 0x8000;
+                for (let i = 0; i < bytes.length; i += chunk) {
+                    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+                }
+                return btoa(binary);
+            }
+
+            function base64ToBytes(value) {
+                const binary = atob(value);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+                return bytes;
+            }
+
+            function openRememberDb() {
+                return new Promise(function (resolve, reject) {
+                    const request = indexedDB.open(REMEMBER_DB_NAME, 1);
+                    request.onupgradeneeded = function () {
+                        if (!request.result.objectStoreNames.contains(REMEMBER_DB_STORE)) {
+                            request.result.createObjectStore(REMEMBER_DB_STORE);
+                        }
+                    };
+                    request.onsuccess = function () {
+                        resolve(request.result);
+                    };
+                    request.onerror = function () {
+                        reject(request.error || new Error('IndexedDB不可用'));
+                    };
+                });
+            }
+
+            function readRememberKey() {
+                return openRememberDb().then(function (db) {
+                    return new Promise(function (resolve, reject) {
+                        const transaction = db.transaction(REMEMBER_DB_STORE, 'readonly');
+                        const request = transaction.objectStore(REMEMBER_DB_STORE).get(REMEMBER_DB_KEY);
+                        request.onsuccess = function () {
+                            db.close();
+                            resolve(request.result || null);
+                        };
+                        request.onerror = function () {
+                            db.close();
+                            reject(request.error);
+                        };
+                    });
+                });
+            }
+
+            function writeRememberKey(key) {
+                return openRememberDb().then(function (db) {
+                    return new Promise(function (resolve, reject) {
+                        const transaction = db.transaction(REMEMBER_DB_STORE, 'readwrite');
+                        transaction.objectStore(REMEMBER_DB_STORE).put(key, REMEMBER_DB_KEY);
+                        transaction.oncomplete = function () {
+                            db.close();
+                            resolve(key);
+                        };
+                        transaction.onerror = function () {
+                            db.close();
+                            reject(transaction.error);
+                        };
+                    });
+                });
+            }
+
+            function getRememberKey() {
+                if (!rememberKeyPromise) {
+                    rememberKeyPromise = readRememberKey().then(function (key) {
+                        if (key) {
+                            return key;
+                        }
+                        return window.crypto.subtle.generateKey(
+                            {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']
+                        ).then(writeRememberKey);
+                    }).catch(function () {
+                        rememberKeyPromise = null;
+                        return null;
+                    });
+                }
+                return rememberKeyPromise;
+            }
+
+            function clearRememberedCredentials() {
+                localStorage.removeItem(REMEMBER_STORAGE_KEY);
+            }
+
+            async function saveRememberedCredentials(username, password) {
+                if (!window.crypto || !window.crypto.subtle || typeof indexedDB === 'undefined') {
+                    return;
+                }
+                try {
+                    const key = await getRememberKey();
+                    if (!key) {
+                        return;
+                    }
+                    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                    const plain = new TextEncoder().encode(JSON.stringify({
+                        username: username,
+                        password: password
+                    }));
+                    const encrypted = await window.crypto.subtle.encrypt(
+                        {name: 'AES-GCM', iv: iv}, key, plain
+                    );
+                    localStorage.setItem(REMEMBER_STORAGE_KEY, JSON.stringify({
+                        iv: bytesToBase64(iv),
+                        data: bytesToBase64(new Uint8Array(encrypted))
+                    }));
+                } catch (e) {
+                    // 加密失败不影响本次登录, 也不回退为明文保存
+                    console.warn('记住密码保存失败', e);
+                }
+            }
+
+            async function restoreRememberedCredentials() {
+                const raw = localStorage.getItem(REMEMBER_STORAGE_KEY);
+                if (!raw || !window.crypto || !window.crypto.subtle || typeof indexedDB === 'undefined') {
+                    return;
+                }
+                try {
+                    const stored = JSON.parse(raw);
+                    if (!stored || !stored.iv || !stored.data) {
+                        throw new Error('记住密码数据不完整');
+                    }
+                    const key = await getRememberKey();
+                    if (!key) {
+                        return;
+                    }
+                    const plain = await window.crypto.subtle.decrypt(
+                        {name: 'AES-GCM', iv: base64ToBytes(stored.iv)}, key, base64ToBytes(stored.data)
+                    );
+                    const credentials = JSON.parse(new TextDecoder().decode(plain));
+                    if (credentials.username && !$('#loginUsername').val()) {
+                        $('#loginUsername').val(credentials.username);
+                    }
+                    if (credentials.password && !$('#loginPassword').val()) {
+                        $('#loginPassword').val(credentials.password);
+                    }
+                    if (credentials.username || credentials.password) {
+                        $('#rememberMe').prop('checked', true);
+                        form.render('checkbox');
+                    }
+                } catch (e) {
+                    // 密钥丢失或数据损坏时清掉失效数据, 下次登录重新保存
+                    clearRememberedCredentials();
+                }
+            }
+
+
+
+            //如果已经登录过，并且token有效,直接跳转到首页
+            if(token && token.length>0){
+                $.ajax({
+                    type: 'post',
+                    url: server_url+'/system/auth/checkToken',
+                    headers:{
+                        Authorization:token
+                    },
+                    dataType: 'json', // 预期服务器返回的数据类型
+                    success: function(response) {
+                        //状态码
+                        let code = response.code;
+                        //提示消息
+                        let msg = response.msg;
+                        if(code===0){
+                            location.href="index.html";   
+                        }else{
+                            //清空
+                            layui.data("yaya",null);
+                        }
+                    },error: function(xhr, status, error) {
+                        //清空
+                        layui.data("yaya",null);
+                        location.href="login.html";
+                    }
+                });
+            }
+
+
+
+            // 登录表单提交
+            form.on('submit(login)', function (data) {
+                //开启加载图标
+                let index = layer.load(0);           
+                //获取请求参数
+                let field = data.field; // 获取表单字段值
+                //提交数据
+                $.ajax({
+                    url: server_url+'/system/auth/login',
+                    method: 'POST',
+                    contentType:'application/json',
+                    data: JSON.stringify(field),
+                    dataType: 'json',
+                    success: function(response) {
+                        //关闭加载图标
+                        layer.close(index);
+                        //状态码
+                        let code = response.code;
+                        //提示消息
+                        let msg = response.msg;
+                        if(code===0){
+                            let data = response.data;
+                            //将登录成功的信息保存到本地存储
+                            layui.data('yaya',{
+                                key: 'token',
+                                value: data.token
+                            });
+                            layui.data('yaya',{
+                                key: 'user',
+                                value: data.user
+                            });
+                            layui.data('yaya',{
+                                key: 'dept',
+                                value: data.dept
+                            });
+                            layui.data('yaya',{
+                                key: 'roles',
+                                value: data.roles
+                            });
+                            layui.data('yaya',{
+                                key: 'permCodes',
+                                value: data.permCodes
+                            });
+                            layui.data('yaya',{
+                                key: 'isSuper',
+                                value: data.isSuper
+                            });
+                            const goHome = function () {
+                                location.href = 'index.html';
+                            };
+                            if ($('#rememberMe').prop('checked')) {
+                                saveRememberedCredentials(field.username, field.password).then(goHome, goHome);
+                            } else {
+                                clearRememberedCredentials();
+                                goHome();
+                            }
+                        }else{
+                            layer.msg(msg);
+                            // 登录失败时验证码可能已被后端消费，重新获取验证码
+                            $("#loginCaptcha").val("");
+                            generalCaptcha();
+                        }
+                    },error: function(xhr, textStatus, errorThrown) {
+                        //关闭加载图标
+                        layer.close(index);
+                        if(xhr.status==500){
+                            layer.msg("服务器开小差.请稍后重试");
+                        }else{
+                            console.log(xhr)
+                            layer.msg(errorThrown);
+                        }
+                    }
+                });
+                return false; // 阻止表单默认跳转
+            });
+
+
+
+            //调用生成验证码的函数
+            generalCaptcha();
+            restoreRememberedCredentials();
+            $('#rememberMe').on('change', function () {
+                if (!this.checked) {
+                    clearRememberedCredentials();
+                }
+            });
+
+            /**
+             * 生成验证码
+             */
+            function generalCaptcha(){
+                //开启加载图标
+                let index = layer.load(0);
+                $.ajax({
+                    type: 'post',
+                    url: server_url+'/system/captcha/captchaImage',
+                    dataType: 'json', // 预期服务器返回的数据类型
+                    success: function(response) {
+                        //关闭加载图标
+                        layer.close(index);
+                        //状态码
+                        let code = response.code;
+                        //提示消息
+                        let msg = response.msg;
+                        if(code===0){
+                            //验证码显示
+                            $("#captcha")[0].src=response.data.captchaImg;
+                            //赋uuid
+                            $("#uuid").val(response.data.uuid);
+                        }else{
+                            layer.msg(msg);
+                        }
+                    },error: function(xhr, textStatus, errorThrown) {
+                        //关闭加载图标
+                        layer.close(index);
+                        if(xhr.status===500){
+                            layer.msg("服务器开小差.请稍后重试");
+                        }else{
+                            console.log(xhr)
+                            layer.msg(errorThrown);
+                        }
+                    }
+                });
+            }
+
+            /**
+             * 刷新验证码
+             */
+            $("#captcha").click(function(){
+                generalCaptcha();
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yaya.system.mapper.SysNoticeMapper">
+
+    <!--
+        自定义 SQL 统一写在本文件(接口中不允许写注解 SQL)
+        继承 BaseMapper 提供的通用方法无需在此声明
+    -->
+
+    <sql id="noticeVoColumns">
+        n.notice_id,
+        n.notice_title,
+        n.notice_level,
+        n.notice_type_id,
+        t.notice_type_name,
+        n.is_top,
+        n.status,
+        n.publish_scope,
+        n.publish_time,
+        n.dept_id,
+        n.create_by,
+        creator.nickname AS create_by_name,
+        n.create_time,
+        n.update_time
+    </sql>
+
+    <sql id="noticeFilters">
+        n.is_deleted = 0
+        <if test="noticeTitle != null and noticeTitle != ''">
+            AND n.notice_title LIKE CONCAT('%', #{noticeTitle}, '%')
+        </if>
+        <if test="noticeTypeId != null">
+            AND n.notice_type_id = #{noticeTypeId}
+        </if>
+        <if test="noticeLevel != null">
+            AND n.notice_level = #{noticeLevel}
+        </if>
+        <if test="status != null">
+            AND n.status = #{status}
+        </if>
+    </sql>
+
+    <select id="getNoticePage" resultType="com.yaya.system.domain.vo.SysNoticeVo">
+        SELECT
+        <include refid="noticeVoColumns"/>
+        FROM sys_notice n
+        LEFT JOIN sys_notice_type t ON t.notice_type_id = n.notice_type_id
+        LEFT JOIN sys_user creator ON creator.user_id = n.create_by
+        <where>
+            <include refid="noticeFilters"/>
+        </where>
+        ORDER BY n.is_top DESC, COALESCE(n.publish_time, n.create_time) DESC, n.notice_id DESC
+    </select>
+
+    <select id="getUserNoticePage" resultType="com.yaya.system.domain.vo.SysNoticeVo">
+        SELECT
+        <include refid="noticeVoColumns"/>,
+        LEFT(n.notice_content, 1000) AS notice_content,
+        nu.is_read,
+        nu.read_time
+        FROM sys_notice n
+        INNER JOIN sys_notice_user nu ON nu.notice_id = n.notice_id AND nu.user_id = #{userId}
+        LEFT JOIN sys_notice_type t ON t.notice_type_id = n.notice_type_id
+        LEFT JOIN sys_user creator ON creator.user_id = n.create_by
+        WHERE n.is_deleted = 0
+          AND n.status = 1
+        <if test="noticeTitle != null and noticeTitle != ''">
+            AND n.notice_title LIKE CONCAT('%', #{noticeTitle}, '%')
+        </if>
+        <if test="noticeTypeId != null">
+            AND n.notice_type_id = #{noticeTypeId}
+        </if>
+        <if test="noticeLevel != null">
+            AND n.notice_level = #{noticeLevel}
+        </if>
+        <if test="onlyUnread != null and onlyUnread">
+            AND nu.is_read = 0
+        </if>
+        ORDER BY n.is_top DESC, n.publish_time DESC, n.notice_id DESC
+    </select>
+
+    <select id="getNoticeDetail" resultType="com.yaya.system.domain.vo.SysNoticeVo">
+        SELECT
+        <include refid="noticeVoColumns"/>,
+        n.notice_content
+        FROM sys_notice n
+        LEFT JOIN sys_notice_type t ON t.notice_type_id = n.notice_type_id
+        LEFT JOIN sys_user creator ON creator.user_id = n.create_by
+        WHERE n.notice_id = #{noticeId}
+          AND n.is_deleted = 0
+    </select>
+
+    <select id="getUserNoticeDetail" resultType="com.yaya.system.domain.vo.SysNoticeVo">
+        SELECT
+        <include refid="noticeVoColumns"/>,
+        n.notice_content,
+        nu.is_read,
+        nu.read_time
+        FROM sys_notice n
+        INNER JOIN sys_notice_user nu ON nu.notice_id = n.notice_id AND nu.user_id = #{userId}
+        LEFT JOIN sys_notice_type t ON t.notice_type_id = n.notice_type_id
+        LEFT JOIN sys_user creator ON creator.user_id = n.create_by
+        WHERE n.notice_id = #{noticeId}
+          AND n.is_deleted = 0
+          AND n.status = 1
+    </select>
+
+    <select id="getTargetDeptIds" resultType="long">
+        SELECT dept_id
+        FROM sys_notice_dept
+        WHERE notice_id = #{noticeId}
+        ORDER BY dept_id
+    </select>
+
+    <select id="getTargetUserIds" resultType="long">
+        SELECT user_id
+        FROM sys_notice_user
+        WHERE notice_id = #{noticeId}
+        ORDER BY user_id
+    </select>
+
+    <update id="logicDeleteById">
+        UPDATE sys_notice
+        SET is_deleted = 1,
+            update_by = #{updateBy},
+            update_time = #{updateTime}
+        WHERE notice_id = #{noticeId}
+          AND is_deleted = 0
+    </update>
+
+    <update id="markAllRead">
+        UPDATE sys_notice_user
+        SET is_read = 1,
+            read_time = #{readTime}
+        WHERE user_id = #{userId}
+          AND is_read = 0
+          AND notice_id IN (
+              SELECT notice_id FROM sys_notice WHERE status = 1 AND is_deleted = 0
+          )
+    </update>
+
+    <select id="countUnreadNotice" resultType="long">
+        SELECT COUNT(*)
+        FROM sys_notice_user nu
+        INNER JOIN sys_notice n ON n.notice_id = nu.notice_id
+        WHERE nu.user_id = #{userId}
+          AND nu.is_read = 0
+          AND n.status = 1
+          AND n.is_deleted = 0
+    </select>
+
+</mapper>

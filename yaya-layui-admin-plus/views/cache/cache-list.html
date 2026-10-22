@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <title>缓存管理</title>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="yaya-panel">
+        <form class="layui-form" style="padding: 10px 0" onsubmit="return false;">
+            <div class="layui-row">
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <label class="yaya-form-label">缓存KEY</label>
+                    <div class="yaya-input-block">
+                        <input type="text" id="cacheKey" placeholder="请输入缓存KEY" autocomplete="off" class="layui-input yaya-input-border-radius">
+                    </div>
+                </div>
+                <div class="layui-col-md3 layui-col-sm3 yaya-form-item">
+                    <button type="button" id="btnSearch" class="yaya-btn yaya-primary">搜索</button>
+                    <button type="button" id="btnReset" class="yaya-btn" style="margin-left: 10px;">重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="yaya-panel" style="margin-top: 10px;">
+        <div style="display: flex;flex-direction: row;justify-content: flex-end;padding: 10px;">
+            <button id="btnRefresh" type="button" class="yaya-btn" style="margin-right: 10px;">刷新</button>
+            <button id="btnClear" type="button" class="yaya-btn yaya-danger">清空缓存</button>
+        </div>
+        <table class="layui-hide" id="table-cache" lay-filter="table-cache"></table>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const table = layui.table;
+        const layer = layui.layer;
+
+        const TABLE_ID = 'table-cache';
+        const BASE_URL = server_url + '/system/cache';
+
+        // 缓存Key包含登录会话等敏感数据, 页面与接口均只允许ROOT访问
+        if (typeof window.hasRole !== 'function' || !window.hasRole('ROOT')) {
+            layer.msg('仅超级管理员可访问缓存管理');
+            $('#btnSearch, #btnReset, #btnRefresh, #btnClear').prop('disabled', true);
+            return;
+        }
+
+        function escapeHtml(text) {
+            return String(text == null ? '' : text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function buildWhere() {
+            const cacheKey = $.trim($('#cacheKey').val());
+            return cacheKey ? {cacheKey: cacheKey} : {};
+        }
+
+        function reloadTable(resetPage) {
+            const options = {where: buildWhere()};
+            if (resetPage) {
+                options.page = {curr: 1};
+            }
+            table.reload(TABLE_ID, options);
+        }
+
+        function formatTtl(ttl) {
+            if (ttl === null || ttl === undefined || ttl === '') {
+                return '-';
+            }
+            const value = Number(ttl);
+            if (Number.isNaN(value) || value === -2) {
+                return '-';
+            }
+            return value === -1 ? '永久' : value;
+        }
+
+        function formatSize(size) {
+            if (size === null || size === undefined || size === '') {
+                return '-';
+            }
+            const value = Number(size);
+            return Number.isNaN(value) ? '-' : value.toLocaleString('zh-CN');
+        }
+
+        table.render({
+            elem: '#table-cache',
+            id: TABLE_ID,
+            url: BASE_URL + '/getCachePage',
+            method: 'post',
+            headers: {
+                Authorization: token
+            },
+            contentType: 'application/json',
+            request: {
+                pageName: 'pageNum',
+                limitName: 'pageSize'
+            },
+            where: buildWhere(),
+            parseData: function (res) {
+                return {
+                    code: res.code,
+                    msg: res.msg,
+                    count: Number((res.data && res.data.total) || 0),
+                    data: (res.data && res.data.records) || []
+                };
+            },
+            skin: 'line',
+            page: {
+                prev: '上一页',
+                next: '下一页',
+                theme: '#409eff'
+            },
+            limit: 10,
+            limits: [10, 20, 50, 100],
+            defaultToolbar: [],
+            cols: [[
+                {field: 'key', title: '缓存KEY', minWidth: 300},
+                {
+                    field: 'type',
+                    title: '类型',
+                    width: 120,
+                    templet: function (row) {
+                        return row.type || '-';
+                    }
+                },
+                {
+                    field: 'ttl',
+                    title: '剩余时间(秒)',
+                    width: 140,
+                    align: 'center',
+                    templet: function (row) {
+                        return formatTtl(row.ttl);
+                    }
+                },
+                {
+                    field: 'size',
+                    title: '大小(字节)',
+                    width: 140,
+                    align: 'center',
+                    templet: function (row) {
+                        return formatSize(row.size);
+                    }
+                },
+                {
+                    title: '操作',
+                    width: 100,
+                    fixed: 'right',
+                    templet: function () {
+                        return '<button class="yaya-btn is-link-danger yaya-btn-small" type="button" lay-event="delete">删除</button>';
+                    }
+                }
+            ]]
+        });
+
+        $('#btnSearch').on('click', function () {
+            reloadTable(true);
+        });
+        $('#btnReset').on('click', function () {
+            $('#cacheKey').val('');
+            reloadTable(true);
+        });
+        $('#btnRefresh').on('click', function () {
+            reloadTable(false);
+        });
+        $('#btnClear').on('click', function () {
+            layer.confirm(
+                '确定清空当前 Redis DB 的全部缓存吗？<br>登录会话也会被清除，所有用户需要重新登录。',
+                {title: '警告', btn: ['确定清空', '取消']},
+                function (index) {
+                    layer.close(index);
+                    $.ajax({
+                        url: BASE_URL + '/clearCache',
+                        method: 'POST',
+                        headers: {
+                            Authorization: token
+                        },
+                        dataType: 'json',
+                        success: function (resp) {
+                            if (resp.code === 0) {
+                                layui.data('yaya', null);
+                                layer.msg('已清空 ' + resp.data + ' 条缓存，即将重新登录', {time: 1200});
+                                setTimeout(function () {
+                                    location.href = '/login.html';
+                                }, 1200);
+                            } else {
+                                layer.msg(resp.msg);
+                            }
+                        },
+                        error: function () {
+                            layer.msg('清空缓存失败，请稍后重试');
+                        }
+                    });
+                }
+            );
+        });
+
+        table.on('tool(' + TABLE_ID + ')', function (obj) {
+            if (obj.event !== 'delete') {
+                return;
+            }
+            const key = obj.data.key;
+            const loginSessionTip = key.indexOf('login_user:') === 0
+                ? '<br>该KEY是登录会话，删除后对应用户会立即下线。'
+                : '';
+            layer.confirm(
+                '确定删除缓存「' + escapeHtml(key) + '」吗？' + loginSessionTip,
+                {title: '提示'},
+                function (index) {
+                    layer.close(index);
+                    $.ajax({
+                        url: BASE_URL + '/deleteCache',
+                        method: 'POST',
+                        headers: {
+                            Authorization: token
+                        },
+                        data: {
+                            key: key
+                        },
+                        dataType: 'json',
+                        success: function (resp) {
+                            layer.msg(resp.msg);
+                            if (resp.code === 0) {
+                                reloadTable(false);
+                            }
+                        },
+                        error: function () {
+                            layer.msg('删除缓存失败，请稍后重试');
+                        }
+                    });
+                }
+            );
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <title>公告详情</title>
+    <style>
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            overflow-y: auto;
+            background: #fafbfc;
+        }
+
+        .yaya-box-fluid {
+            padding-bottom: 24px;
+        }
+
+        .notice-detail-shell {
+            max-width: 900px;
+            min-height: calc(100vh - 24px);
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notice-detail-card {
+            flex: 1;
+            margin-top: 12px;
+            background: var(--yaya-card);
+            border: 1px solid var(--yaya-card-border);
+            border-radius: var(--yaya-radius-lg);
+            box-shadow: var(--yaya-shadow);
+            overflow: hidden;
+        }
+
+        .notice-detail-hero {
+            padding: 24px 28px 0;
+            background: var(--yaya-card);
+        }
+
+        .notice-detail-badges {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+
+        .notice-type-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 12px;
+            border-radius: 2px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .5px;
+        }
+
+        .notice-type-tag.level-0 {
+            color: #276749;
+            background: #e8f5e9;
+            border-left: 3px solid #38a169;
+        }
+
+        .notice-type-tag.level-1 {
+            color: #b7791f;
+            background: #fff8e6;
+            border-left: 3px solid #d97706;
+        }
+
+        .notice-type-tag.level-2 {
+            color: #c53030;
+            background: #fff5f5;
+            border-left: 3px solid #e53e3e;
+        }
+
+        .notice-detail-title {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 32px;
+            color: var(--yaya-text-1);
+            word-break: break-word;
+            letter-spacing: -.2px;
+        }
+
+        .notice-detail-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 12px 0;
+            margin-top: 16px;
+            border-top: 1px solid var(--yaya-border);
+            border-bottom: 1px solid var(--yaya-border);
+            font-size: 12px;
+            color: var(--yaya-text-4);
+        }
+
+        .notice-detail-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .notice-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 22px 28px 0;
+            color: var(--yaya-gray-400);
+        }
+
+        .notice-divider::before,
+        .notice-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--yaya-border), transparent);
+        }
+
+        .notice-divider-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--yaya-gray-400);
+        }
+
+        .notice-detail-body {
+            padding: 20px 28px 28px;
+        }
+
+        .notice-content {
+            font-size: 15px;
+            line-height: 1.85;
+            color: var(--yaya-text-2);
+            word-break: break-word;
+        }
+
+        .notice-content p {
+            margin: 12px 0;
+        }
+
+        .notice-content h1,
+        .notice-content h2,
+        .notice-content h3,
+        .notice-content h4,
+        .notice-content h5 {
+            margin: 20px 0 10px;
+            color: var(--yaya-text-1);
+            line-height: 1.4;
+        }
+
+        .notice-content img,
+        .notice-content video {
+            max-width: 100%;
+            height: auto;
+            border-radius: var(--yaya-radius-md);
+            margin: 12px 0;
+        }
+
+        .notice-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+        }
+
+        .notice-content th,
+        .notice-content td {
+            border: 1px solid var(--yaya-border);
+            padding: 8px 10px;
+            text-align: left;
+        }
+
+        .notice-content th {
+            background: var(--yaya-gray-100);
+            font-weight: 600;
+        }
+
+        .notice-content blockquote {
+            margin: 14px 0;
+            padding: 10px 14px;
+            border-left: 3px solid var(--yaya-primary-border);
+            background: var(--yaya-primary-bg);
+            color: var(--yaya-text-3);
+            border-radius: 0 var(--yaya-radius-sm) var(--yaya-radius-sm) 0;
+        }
+
+        .notice-content a {
+            color: var(--yaya-primary);
+            text-decoration: none;
+        }
+
+        .notice-content a:hover {
+            text-decoration: underline;
+        }
+
+        .notice-content strong,
+        .notice-content b {
+            font-weight: 600;
+            color: var(--yaya-text-1);
+        }
+
+        .notice-attachments {
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 1px dashed var(--yaya-border);
+        }
+
+        .notice-attachments-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--yaya-text-1);
+        }
+
+        .notice-attachment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .notice-attachment-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border: 1px solid var(--yaya-border);
+            border-radius: var(--yaya-radius-md);
+            background: var(--yaya-gray-100);
+            font-size: 13px;
+            color: var(--yaya-text-2);
+            text-decoration: none;
+        }
+
+        .notice-attachment-item:hover {
+            border-color: var(--yaya-primary-border);
+            color: var(--yaya-primary);
+        }
+
+        .notice-attachment-item .attachment-name {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .notice-state {
+            padding: 60px 24px;
+            text-align: center;
+            color: var(--yaya-text-4);
+        }
+
+        .notice-state .layui-icon {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 42px;
+            color: var(--yaya-gray-400);
+        }
+
+        .notice-state.is-error {
+            color: var(--yaya-danger);
+        }
+
+        .notice-state.is-error .layui-icon {
+            color: var(--yaya-danger);
+        }
+
+        @media (max-width: 680px) {
+            .notice-detail-hero,
+            .notice-detail-body,
+            .notice-divider {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            .notice-detail-title {
+                font-size: 19px;
+                line-height: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div class="notice-detail-shell">
+        <div class="notice-detail-card">
+            <div id="detailContent">
+                <div class="notice-state">
+                    <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i>
+                    公告加载中...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const layer = layui.layer;
+
+        const noticeId = new URLSearchParams(location.search).get('noticeId');
+        const roleCodes = (Array.isArray(roles) ? roles : []).map(function (role) {
+            return String(role.roleCode || '').toUpperCase();
+        });
+        const isAdmin = is_super === true || roleCodes.includes('OPERATION');
+
+        function escapeHtml(text) {
+            return String(text == null ? '' : text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function sanitizeHtml(html) {
+            return window.yaya_sanitize_html(html);
+        }
+
+        function levelText(level) {
+            const map = {0: '普通', 1: '重要', 2: '紧急'};
+            return map[Number(level)] || '普通';
+        }
+
+        function levelClass(level) {
+            const value = Number(level);
+            if (value === 2) return 'yaya-tag-plain-danger';
+            if (value === 1) return 'yaya-tag-plain-warning';
+            return 'yaya-tag-plain-info';
+        }
+
+        function scopeText(scope) {
+            const map = {1: '全员', 2: '指定部门', 3: '指定用户'};
+            return map[Number(scope)] || '-';
+        }
+
+        function renderError(message) {
+            $('#detailContent').html('<div class="notice-state is-error">'
+                + '<i class="layui-icon layui-icon-close-fill"></i>'
+                + escapeHtml(message) + '</div>');
+        }
+
+        function renderAttachments(attachments) {
+            if (!attachments || attachments.length === 0) {
+                return '';
+            }
+            let html = '<div class="notice-attachments">'
+                + '<div class="notice-attachments-title"><i class="layui-icon layui-icon-paperclip"></i>附件</div>'
+                + '<div class="notice-attachment-list">';
+            attachments.forEach(function (file) {
+                const content = '<i class="layui-icon layui-icon-file" style="color:var(--yaya-primary);"></i>'
+                    + '<span class="attachment-name" title="' + escapeHtml(file.fileName) + '">'
+                    + escapeHtml(file.fileName) + '</span>'
+                    + '<i class="layui-icon layui-icon-download-circle" style="color:var(--yaya-text-4);"></i>';
+                const fileUrl = window.yaya_resolve_file_url(file.fileServerUrl);
+                if (fileUrl) {
+                    html += '<a class="notice-attachment-item" href="' + escapeHtml(fileUrl)
+                        + '" target="_blank" rel="noopener">' + content + '</a>';
+                } else {
+                    html += '<span class="notice-attachment-item">' + content + '</span>';
+                }
+            });
+            return html + '</div></div>';
+        }
+
+        function renderDetail(data) {
+            const read = Number(data.isRead) === 1;
+            const readHtml = isAdmin && (data.isRead === null || data.isRead === undefined)
+                ? '<span><i class="layui-icon layui-icon-set"></i>管理预览</span>'
+                : '<span id="noticeReadState" style="color:' + (read ? 'var(--yaya-success)' : 'var(--yaya-primary)') + '">'
+                + '<i class="layui-icon ' + (read ? 'layui-icon-ok-circle' : 'layui-icon-notice') + '"></i>'
+                + (read ? '已读' : '未读') + '</span>';
+            const levelValue = Number(data.noticeLevel);
+            const levelCls = levelValue === 2 ? 'level-2' : (levelValue === 1 ? 'level-1' : 'level-0');
+            const html = '<div class="notice-detail-hero">'
+                + '<div class="notice-detail-badges">'
+                + '<span class="notice-type-tag ' + levelCls + '">'
+                + escapeHtml(data.noticeTypeName || '公告') + '</span>'
+                + (Number(data.isTop) === 1
+                    ? '<span class="yaya-tag yaya-tag-plain-primary is-round tag-small">置顶</span>' : '')
+                + '<span class="yaya-tag yaya-tag-plain-info is-round tag-small">'
+                + levelText(data.noticeLevel) + '</span>'
+                + '</div>'
+                + '<h1 class="notice-detail-title">' + escapeHtml(data.noticeTitle) + '</h1>'
+                + '<div class="notice-detail-meta">'
+                + '<span><i class="layui-icon layui-icon-username"></i>'
+                + escapeHtml(data.createByName || '-') + '</span>'
+                + '<span><i class="layui-icon layui-icon-date"></i>'
+                + escapeHtml(data.publishTime || '-') + '</span>'
+                + '<span><i class="layui-icon layui-icon-group"></i>'
+                + escapeHtml(scopeText(data.publishScope)) + '</span>'
+                + readHtml
+                + '</div></div>'
+                + '<div class="notice-divider"><span class="notice-divider-dot"></span>'
+                + '<span class="notice-divider-dot"></span>'
+                + '<span class="notice-divider-dot"></span></div>'
+                + '<div class="notice-detail-body">'
+                + '<div class="notice-content">' + sanitizeHtml(data.noticeContent) + '</div>'
+                + renderAttachments(data.attachments)
+                + '</div>';
+            $('#detailContent').html(html);
+        }
+
+        function markRead() {
+            $.ajax({
+                url: server_url + '/system/notice/markNoticeRead',
+                method: 'POST',
+                headers: {Authorization: token},
+                data: {noticeId: noticeId},
+                dataType: 'json',
+                success: function (resp) {
+                    if (resp.code === 0) {
+                        $('#noticeReadState').css('color', 'var(--yaya-success)')
+                            .html('<i class="layui-icon layui-icon-ok-circle"></i>已读');
+                        if (window.parent
+                            && typeof window.parent.refreshNoticeUnread === 'function') {
+                            window.parent.refreshNoticeUnread();
+                        }
+                    }
+                }
+            });
+        }
+
+        function loadDetail() {
+            if (!noticeId) {
+                renderError('缺少公告ID');
+                return;
+            }
+            $.ajax({
+                url: server_url + '/system/notice/getNoticeDetail',
+                method: 'POST',
+                headers: {Authorization: token},
+                data: {noticeId: noticeId},
+                dataType: 'json',
+                success: function (resp) {
+                    if (resp.code !== 0) {
+                        renderError(resp.msg || '公告不存在或无权查看');
+                        return;
+                    }
+                    renderDetail(resp.data || {});
+                    if (!resp.data.isRead || Number(resp.data.isRead) !== 1) {
+                        markRead();
+                    }
+                },
+                error: function () {
+                    renderError('公告加载失败，请稍后重试');
+                }
+            });
+        }
+
+        //加载详情页数据
+        loadDetail();
+    });
+</script>
+</body>
+</html>

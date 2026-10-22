@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css">
+    <link rel="stylesheet" href="../../css/yaya-common.css">
+    <link rel="stylesheet" href="../../css/yaya-style-extend.css">
+    <title>上传文件</title>
+    <style>
+        html, body {
+            height: 100%;
+        }
+        body {
+            overflow-y: auto;
+        }
+        .layui-upload-drag {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .layui-upload-drag:hover {
+            border-color: var(--yaya-primary);
+        }
+        .upload-text {
+            font-size: 14px;
+            color: #666;
+            margin-top: 8px;
+        }
+        .upload-hint {
+            font-size: 12px;
+            color: #909399;
+            margin-top: 6px;
+        }
+        .layui-upload-drag .layui-icon{
+            color: #409eff;
+        }
+    </style>
+</head>
+<body>
+<div class="yaya-box-fluid">
+    <div style="padding: 20px;">
+        <div class="layui-upload-drag" id="uploadFile" data-perm="file:upload">
+            <i class="layui-icon layui-icon-upload"></i>
+            <div class="upload-text">点击选择文件，或将文件拖拽到此处</div>
+            <div class="upload-hint">支持任意类型文件，单个文件不超过 128MB</div>
+        </div>
+        <div style="text-align: center; margin-top: 24px;">
+            <button type="button" id="btnSubmit" data-perm="file:upload" class="yaya-btn yaya-primary">提交上传</button>
+            <button type="button" id="btnCancel" class="yaya-btn" style="margin-left: 10px;">取消</button>
+        </div>
+    </div>
+</div>
+<script src="../../layui/layui.js"></script>
+<script src="../../js/server.js"></script>
+<script>
+    layui.use(function () {
+        const $ = layui.$;
+        const layer = layui.layer;
+        const upload = layui.upload;
+
+        const BASE_URL = server_url + '/system/file';
+
+        let uploadLoading = null;
+
+        function closeUploadLoading() {
+            if (uploadLoading !== null) {
+                layer.close(uploadLoading);
+                uploadLoading = null;
+            }
+        }
+
+        function closeSelf() {
+            if (parent && parent.layer && parent.layer.getFrameIndex) {
+                const index = parent.layer.getFrameIndex(window.name);
+                parent.layer.close(index);
+                return;
+            }
+            layer.closeAll();
+        }
+
+        // 选择或拖拽文件后不自动上传, 点击"提交上传"按钮才上传
+        upload.render({
+            elem: '#uploadFile',
+            url: BASE_URL + '/uploadFile',
+            field: 'file',
+            headers: {
+                Authorization: token
+            },
+            accept: 'file',
+            acceptMime: '',
+            size: 128 * 1024, // 单位 KB, 与后端 spring.servlet.multipart.max-file-size 保持一致
+            multiple: false,
+            number: 1,
+            drag: true,
+            auto: false,
+            bindAction: '#btnSubmit',
+            before: function () {
+                closeUploadLoading();
+                // layui upload 未提供进度回调, 上传期间给出等待提示
+                uploadLoading = layer.msg('文件上传中，请稍候...', {time: 0, shade: 0.1});
+            },
+            done: function (res) {
+                closeUploadLoading();
+                if (res.code === 0) {
+                    if (parent && parent.layer && parent.layer.msg) {
+                        parent.layer.msg('上传成功');
+                    }
+                    closeSelf();
+                } else {
+                    layer.msg(res.msg || '上传失败');
+                }
+            },
+            error: function () {
+                closeUploadLoading();
+                layer.msg('上传失败，请稍后重试');
+            }
+        });
+
+        // 未选择文件时点击提交给出提示; 已选择文件时由 layui 的 bindAction 触发上传
+        $('#btnSubmit').on('click', function () {
+            if (!$('#uploadFile').parent().find('.layui-upload-choose').length) {
+                layer.msg('请选择或拖拽文件');
+            }
+        });
+
+        $('#btnCancel').on('click', closeSelf);
+    });
+</script>
+</body>
+</html>
