@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
  */
 public interface SysSecretKeyMapper extends BaseMapper<SysSecretKey> {
 
-    @DataScope(userAlias = "f",userIdColumnName = "create_by",deptAlias = "f",deptIdColumnName = "dept_id")
+    @DataScope(userAlias = "sk",userIdColumnName = "create_by",deptAlias = "sk",deptIdColumnName = "dept_id")
     IPage<SysSecretKey> selectSecretKeyPage(Page<SysSecretKey> page, @Param(Constants.WRAPPER) Wrapper<SysSecretKey> queryWrapper);
 
     /**

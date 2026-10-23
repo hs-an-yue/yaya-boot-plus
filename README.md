@@ -45,6 +45,6 @@
 
 ```
 
-2026/10/22 YaYa中后台管理系统(yaya-boot-plus) v1.0.0 发布 
+2026/10/22 YaYa中后台管理系统(yaya-boot-plus) v1.0.0 发布，已通过SonarQube安全扫描.
 ```
 ---
