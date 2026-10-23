@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.yaya.framework.config.YaYaConfig;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -109,6 +110,7 @@ public class MonitorMetricsCollector {
                 (totalMem - freeMem) / MB, totalMem / MB,
                 heap.getUsed() / MB, heap.getMax() / MB,
                 threadBean.getThreadCount(),
+                Runtime.getRuntime().availableProcessors(),
                 osBean.getSystemLoadAverage(),
                 diskPercent, (diskTotal - diskUsable) / GB, diskTotal / GB,
                 runtimeBean.getUptime(),
@@ -146,9 +148,8 @@ public class MonitorMetricsCollector {
     }
 
     private boolean checkRedis() {
-        try {
-            String pong = stringRedisTemplate.getConnectionFactory().getConnection().ping();
-            return "PONG".equalsIgnoreCase(pong);
+        try (RedisConnection connection = stringRedisTemplate.getConnectionFactory().getConnection()) {
+            return "PONG".equalsIgnoreCase(connection.ping());
         } catch (Exception e) {
             log.debug("系统监控-Redis健康探测失败: {}", e.getMessage());
             return false;

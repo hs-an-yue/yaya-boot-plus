@@ -3,9 +3,10 @@ spring:
     name: yaya-boot-plus
     version: @project.version@
   profiles:
-    # 激活的配置: dev(开发环境) + mysql(数据库类型)
-    # 切换数据库只需改为: dev,postgresql
-    # 也可在启动时覆盖: --spring.profiles.active=dev,postgresql
+    # 激活的配置       : dev(开发环境) + mysql(数据库类型)
+    # 切换数据库只需改为 : dev,dev-postgresql
+    # 切换环境只需改为  : prod,prod-mysql  或者  prod,prod-postgresql
+    # 也可在启动时覆盖  : --spring.profiles.active=dev,dev-postgresql
     active: dev,dev-mysql
   servlet:
     multipart:

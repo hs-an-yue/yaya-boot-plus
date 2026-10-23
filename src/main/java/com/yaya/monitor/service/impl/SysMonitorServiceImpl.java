@@ -42,6 +42,7 @@ public class SysMonitorServiceImpl implements SysMonitorService {
         vo.setJvmHeapUsedMb(round1(snapshot.jvmHeapUsedMb()));
         vo.setJvmHeapMaxMb(round1(snapshot.jvmHeapMaxMb()));
         vo.setThreadCount(snapshot.threadCount());
+        vo.setCpuCoreCount(snapshot.cpuCoreCount());
         vo.setLoadAverage(round2(snapshot.loadAverage()));
         vo.setDiskUsedPercent(round1(snapshot.diskUsedPercent()));
         vo.setDiskUsedGb(round1(snapshot.diskUsedGb()));

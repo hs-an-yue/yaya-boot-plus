@@ -5,6 +5,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.nio.file.Path;
 
@@ -13,6 +16,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * 资源监控采样器测试
@@ -52,6 +58,23 @@ class MonitorMetricsCollectorTest {
         // Redis/数据库依赖为空 → 探测失败 → 状态不可用, 其余指标不受影响
         assertFalse(snapshot.redisOk());
         assertFalse(snapshot.dbOk());
+    }
+
+    @Test
+    @DisplayName("Redis健康探测: 使用后关闭RedisConnection")
+    void redisHealthCheckClosesConnection() {
+        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+        RedisConnectionFactory connectionFactory = mock(RedisConnectionFactory.class);
+        RedisConnection connection = mock(RedisConnection.class);
+        when(redisTemplate.getConnectionFactory()).thenReturn(connectionFactory);
+        when(connectionFactory.getConnection()).thenReturn(connection);
+        when(connection.ping()).thenReturn("PONG");
+        collector.stringRedisTemplate = redisTemplate;
+
+        MonitorSnapshot snapshot = collector.sampleNow();
+
+        assertTrue(snapshot.redisOk());
+        verify(connection).close();
     }
 
     @Test

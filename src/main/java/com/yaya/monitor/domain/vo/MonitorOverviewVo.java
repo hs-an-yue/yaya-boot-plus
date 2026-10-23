@@ -31,6 +31,9 @@ public class MonitorOverviewVo {
     @Schema(description = "JVM线程数")
     private Integer threadCount;
 
+    @Schema(description = "可用CPU核数")
+    private Integer cpuCoreCount;
+
     @Schema(description = "1分钟系统负载(Windows恒为负数, 前端显示 '-')")
     private Double loadAverage;
 

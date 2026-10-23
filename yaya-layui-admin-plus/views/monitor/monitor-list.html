@@ -378,8 +378,8 @@
                 {
                     name: '系统负载',
                     value: d.loadAverage < 0 ? '当前系统不支持' : d.loadAverage.toFixed(2),
-                    desc: '1 分钟平均负载，CPU 核数以内为正常',
-                    status: d.loadAverage < 0 ? ['ok', '-'] : d.loadAverage > 4 ? ['err', '告警'] : d.loadAverage > 2 ? ['warn', '偏高'] : ['ok', '正常']
+                    desc: d.loadAverage < 0 ? '当前操作系统未提供负载数据' : '1 分钟平均负载 / ' + (d.cpuCoreCount || '-') + ' 核，比例超过 1 需要关注',
+                    status: d.loadAverage < 0 ? ['warn', '未知'] : (d.loadAverage / Math.max(1, d.cpuCoreCount || 1)) > 1.5 ? ['err', '告警'] : (d.loadAverage / Math.max(1, d.cpuCoreCount || 1)) > 1 ? ['warn', '偏高'] : ['ok', '正常']
                 },
                 {
                     name: '磁盘使用率',

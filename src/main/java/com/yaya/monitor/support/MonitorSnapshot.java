@@ -10,6 +10,7 @@ package com.yaya.monitor.support;
  * @param jvmHeapUsedMb  JVM 堆已用(MB)
  * @param jvmHeapMaxMb   JVM 堆上限(MB)
  * @param threadCount    JVM 线程数
+ * @param cpuCoreCount   可用 CPU 核数
  * @param loadAverage    1 分钟系统负载(Windows 恒为负数, 前端显示 '-')
  * @param diskUsedPercent 上传/日志所在磁盘使用率(0~100)
  * @param diskUsedGb     磁盘已用(GB)
@@ -27,6 +28,7 @@ public record MonitorSnapshot(
         double jvmHeapUsedMb,
         double jvmHeapMaxMb,
         int threadCount,
+        int cpuCoreCount,
         double loadAverage,
         double diskUsedPercent,
         double diskUsedGb,
