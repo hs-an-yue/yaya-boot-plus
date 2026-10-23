@@ -7,4 +7,4 @@
 版本 : JDK ${java.version}
 作者 : YaYa
 邮箱 : hd1611756908@163.com
-仓库 : https://gitee.com/ukoko
+仓库 : https://gitee.com/ukoko  https://github.com/hs-an-yue/yaya-boot-plus

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yaya.framework.config.YaYaConfig;
 import com.yaya.framework.dto.PageDTO;
 import com.yaya.framework.exception.GlobalCommonException;
+import com.yaya.framework.utils.DesensitizeUtils;
 import com.yaya.framework.utils.SecurityUtils;
 import com.yaya.monitor.domain.entity.SysLog;
 import com.yaya.monitor.domain.query.SysLogQuery;
@@ -12,6 +13,7 @@ import com.yaya.monitor.mapper.SysLogMapper;
 import com.yaya.monitor.service.SysLogService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -44,7 +46,13 @@ public class SysLogServiceImpl implements SysLogService {
         pageDTO.setPageNum((int) sysLogPage.getCurrent());
         pageDTO.setPageSize((int) sysLogPage.getSize());
         pageDTO.setTotal(sysLogPage.getTotal());
-        pageDTO.setRecords(sysLogPage.getRecords());
+        pageDTO.setRecords(sysLogPage.getRecords().stream().peek(x->{
+            String ip = x.getIp();
+            if(StringUtils.isNotEmpty(ip)){
+                //IP脱敏
+                x.setIp(DesensitizeUtils.desensitizeIp(ip));
+            }
+        }).toList());
         return pageDTO;
     }
 
