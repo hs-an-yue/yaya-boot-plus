@@ -239,7 +239,7 @@
                     </div>
                     <div class="layui-col-xs12 layui-col-sm6">
                         <div class="layui-form-item">
-                            <label class="layui-form-label">所属部门</label>
+                            <label class="layui-form-label"><span class="yaya-required">*</span>所属部门</label>
                             <div class="layui-input-block">
                                 <div id="deptSelect"></div>
                             </div>
@@ -276,10 +276,10 @@
                     </div>
                     <div class="layui-col-xs12">
                         <div class="layui-form-item">
-                            <label class="layui-form-label">角色</label>
+                            <label class="layui-form-label"><span class="yaya-required">*</span>角色</label>
                             <div class="layui-input-block">
                                 <div id="roleSelect"></div>
-                                <div class="yaya-form-hint">ROOT 角色不可分配；不选择表示不授予角色</div>
+                                <div class="yaya-form-hint">ROOT 角色不可分配；角色为必选项，请至少选择一个角色</div>
                             </div>
                         </div>
                     </div>
@@ -415,7 +415,7 @@
                     el: '#roleSelect',
                     data: roleData,
                     filterable: true,
-                    tips: '请选择角色（可不选）',
+                    tips: '请选择角色（必选）',
                     theme: {
                         color: PRIMARY
                     }
@@ -642,6 +642,11 @@
                 return false;
             }
             const field = data.field;
+            const selectedRoleIds = roleSelect ? (roleSelect.getValue('value') || []) : [];
+            if (selectedRoleIds.length === 0) {
+                layer.msg('角色不能为空');
+                return false;
+            }
             const payload = {
                 userId: String(userInfo.userId),
                 username: userInfo.username,
@@ -652,7 +657,7 @@
                 deptId: String(deptIds[0]),
                 expiredTime: $.trim(field.expiredTime || '') || null,
                 remark: $.trim(field.remark || '') || null,
-                roleIds: roleSelect ? (roleSelect.getValue('value') || []).map(String) : [],
+                roleIds: selectedRoleIds.map(String),
                 postIds: postSelect ? (postSelect.getValue('value') || []).map(String) : []
             };
             const loading = layer.load(0);

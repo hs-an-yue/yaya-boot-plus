@@ -41,10 +41,19 @@
 * [使用文档](使用手册.md)
 
 ---
+
+## 开源地址
+
+```
+gitee: https://gitee.com/ukoko/yaya-boot-plus
+github: https://github.com/hs-an-yue/yaya-boot-plus
+```
+
+---
 ## 日志
 
 ```
-
+2026/10/27 修复用户角色必选的BUG和一些样式优化 🆕
 2026/10/22 YaYa中后台管理系统(yaya-boot-plus) v1.0.0 发布，已通过SonarQube安全扫描.
 ```
 ---

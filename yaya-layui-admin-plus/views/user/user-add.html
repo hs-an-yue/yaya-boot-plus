@@ -259,10 +259,10 @@
                     </div>
                     <div class="layui-col-xs12">
                         <div class="layui-form-item">
-                            <label class="layui-form-label">角色</label>
+                            <label class="layui-form-label"><span class="yaya-required">*</span>角色</label>
                             <div class="layui-input-block">
                                 <div id="roleSelect"></div>
-                                <div class="yaya-form-hint">ROOT 角色不可分配；不选择表示暂不授予角色</div>
+                                <div class="yaya-form-hint">ROOT 角色不可分配；角色为必选项，请至少选择一个角色</div>
                             </div>
                         </div>
                     </div>
@@ -399,7 +399,7 @@
                     el: '#roleSelect',
                     data: roleData,
                     filterable: true,
-                    tips: '请选择角色（可不选）',
+                    tips: '请选择角色（必选）',
                     theme: {
                         color: PRIMARY
                     }
@@ -538,6 +538,10 @@
             const field = data.field;
             const roleIds = roleSelect ? (roleSelect.getValue('value') || []).map(String) : [];
             const postIds = postSelect ? (postSelect.getValue('value') || []).map(String) : [];
+            if (roleIds.length === 0) {
+                layer.msg('角色不能为空');
+                return false;
+            }
             const payload = {
                 username: $.trim(field.username),
                 password: field.password,
