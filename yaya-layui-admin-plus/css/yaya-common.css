@@ -187,10 +187,11 @@
 .layui-input,.layui-textarea{
     border-radius: var(--yaya-radius-md);
 }
-/* 下拉面板圆角 */
+/* 下拉面板圆角(overflow-y:auto 保留 layui 原生滚动, 否则选项过多时面板被裁剪且无滚动条) */
 .layui-form-select dl{
     border-radius: var(--yaya-radius-md);
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 /* 单选框选中颜色跟随主题 */
 .layui-form-radio:hover>*,

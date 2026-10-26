@@ -7,7 +7,7 @@ spring:
     # 切换数据库只需改为 : dev,dev-postgresql
     # 切换环境只需改为  : prod,prod-mysql  或者  prod,prod-postgresql
     # 也可在启动时覆盖  : --spring.profiles.active=dev,dev-postgresql
-    active: dev,dev-mysql
+    active: dev,dev-postgresql
   servlet:
     multipart:
       max-file-size: 128MB     # 文件上传单个文件约束
